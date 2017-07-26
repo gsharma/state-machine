@@ -51,15 +51,23 @@ public class StateMachineTest {
     assertTrue(machine.transitionTo(BtoC.getToState()));
     assertEquals(BtoC.getToState(), machine.readCurrentState());
 
-    // C->B->A->INIT
-    assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_STEP_WISE));
+    assertTrue(machine.alive());
+    assertTrue(machine.shutdown());
+    assertFalse(machine.alive());
     assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+  }
 
-    /*
-     * success = machine.rewind(RewindMode.ONE_STEP); logger.info(machine.readCurrentState());
-     * success = machine.rewind(RewindMode.ONE_STEP); logger.info(machine.readCurrentState());
-     * success = machine.rewind(RewindMode.ONE_STEP);
-     */
+  @Test
+  public void testStateMachineFlowFullRewind() throws StateMachineException {
+    final List<Transition> transitions = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitions.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitions.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitions.add(BtoC);
+    final StateMachine machine = new StateMachine(transitions);
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -75,6 +83,98 @@ public class StateMachineTest {
 
     // C->B->A->INIT
     assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_STEP_WISE));
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+
+    // INIT->A
+    assertTrue(machine.transitionTo(toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState());
+
+    // A->B
+    assertTrue(machine.transitionTo(AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState());
+
+    // B->C
+    assertTrue(machine.transitionTo(BtoC.getToState()));
+    assertEquals(BtoC.getToState(), machine.readCurrentState());
+
+    // C->B->A->INIT
+    assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_STEP_WISE));
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+
+    assertTrue(machine.alive());
+    assertTrue(machine.shutdown());
+    assertFalse(machine.alive());
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+  }
+
+  @Test
+  public void testStateMachineFlowStepWiseRewind() throws StateMachineException {
+    final List<Transition> transitions = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitions.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitions.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitions.add(BtoC);
+    final StateMachine machine = new StateMachine(transitions);
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+
+    // INIT->A
+    assertTrue(machine.transitionTo(toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState());
+
+    // A->B
+    assertTrue(machine.transitionTo(AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState());
+
+    // B->C
+    assertTrue(machine.transitionTo(BtoC.getToState()));
+    assertEquals(BtoC.getToState(), machine.readCurrentState());
+
+    // C->B
+    assertTrue(machine.rewind(RewindMode.ONE_STEP));
+    assertEquals(BtoC.getFromState(), machine.readCurrentState());
+
+    // B->A
+    assertTrue(machine.rewind(RewindMode.ONE_STEP));
+    assertEquals(AtoB.getFromState(), machine.readCurrentState());
+
+    // A->INIT
+    assertTrue(machine.rewind(RewindMode.ONE_STEP));
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+
+    assertTrue(machine.alive());
+    assertTrue(machine.shutdown());
+    assertFalse(machine.alive());
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+  }
+
+  @Test
+  public void testStateMachineFlowRewindReset() throws StateMachineException {
+    final List<Transition> transitions = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitions.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitions.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitions.add(BtoC);
+    final StateMachine machine = new StateMachine(transitions);
+    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+
+    // INIT->A
+    assertTrue(machine.transitionTo(toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState());
+
+    // A->B
+    assertTrue(machine.transitionTo(AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState());
+
+    // B->C
+    assertTrue(machine.transitionTo(BtoC.getToState()));
+    assertEquals(BtoC.getToState(), machine.readCurrentState());
+
+    // C->INIT
+    assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_HARD_RESET));
     assertEquals(StateMachine.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());

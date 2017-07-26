@@ -85,16 +85,17 @@ public final class StateMachine {
     }
   }
 
-  public static class State {
+  public static final class State {
     private final String id = UUID.randomUUID().toString();
-    private final String name;
+    private final String name; // optional
     private Optional<Map<Object, Object>> customMetadata = Optional.empty();
 
     public State(final String name) throws StateMachineException {
-      if (name == null || name.trim().length() > maxStateNameLength) {
+      if (name != null && name.trim().length() <= maxStateNameLength) {
+        this.name = name.trim();
+      } else {
         throw new StateMachineException(Code.INVALID_STATE_NAME);
       }
-      this.name = name;
     }
 
     public String getId() {
