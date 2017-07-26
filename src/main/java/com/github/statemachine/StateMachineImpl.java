@@ -20,6 +20,16 @@ import com.github.statemachine.StateMachineException.Code;
 /**
  * A simple Finite State Machine.
  * 
+ * Notes for users:<br>
+ * 1. this FSM instance is thread-safe<br>
+ * 2. it is designed to not be singleton within a process, so, if there's a desire to have many
+ * state machines, just create as many as needed<br>
+ * 3. for every instance of FSM, various flows are meant to be reused. There's no need to make a new
+ * FSM instance for the same flow every time.<br>
+ * 4. expanding on #3, if a state machine is running and going through various state transitions,
+ * the FSM itself does not expect any thread affinity ( meaning the caller does not have to use the
+ * same thread to change states).<br>
+ * 
  * @author gaurav
  */
 public final class StateMachineImpl implements StateMachine {
