@@ -6,16 +6,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Test;
-
-import com.github.statemachine.StateMachine.RewindMode;
-import com.github.statemachine.StateMachine.State;
-import com.github.statemachine.StateMachine.StateMachineException;
-import com.github.statemachine.StateMachine.Transition;
-import com.github.statemachine.StateMachine.TransitionResult;
 
 /**
  * Tests to maintain the sanity and correctness of StateMachine.
@@ -25,7 +20,7 @@ public class StateMachineTest {
     System.setProperty("log4j.configurationFile", "log4j.properties");
   }
 
-  private static final Logger logger = LogManager.getLogger(StateMachine.class.getSimpleName());
+  private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
 
   @Test
   public void testStateMachineFlow() throws StateMachineException {
@@ -36,8 +31,8 @@ public class StateMachineTest {
     transitions.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitions.add(BtoC);
-    final StateMachine machine = new StateMachine(transitions);
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    final StateMachine machine = new StateMachineImpl(transitions);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -54,7 +49,7 @@ public class StateMachineTest {
     assertTrue(machine.alive());
     assertTrue(machine.shutdown());
     assertFalse(machine.alive());
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
 
   @Test
@@ -66,8 +61,8 @@ public class StateMachineTest {
     transitions.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitions.add(BtoC);
-    final StateMachine machine = new StateMachine(transitions);
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    final StateMachine machine = new StateMachineImpl(transitions);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -83,7 +78,7 @@ public class StateMachineTest {
 
     // C->B->A->INIT
     assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_STEP_WISE));
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -99,12 +94,12 @@ public class StateMachineTest {
 
     // C->B->A->INIT
     assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_STEP_WISE));
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
     assertTrue(machine.shutdown());
     assertFalse(machine.alive());
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
 
   @Test
@@ -116,8 +111,8 @@ public class StateMachineTest {
     transitions.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitions.add(BtoC);
-    final StateMachine machine = new StateMachine(transitions);
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    final StateMachine machine = new StateMachineImpl(transitions);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -141,12 +136,12 @@ public class StateMachineTest {
 
     // A->INIT
     assertTrue(machine.rewind(RewindMode.ONE_STEP));
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
     assertTrue(machine.shutdown());
     assertFalse(machine.alive());
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
 
   @Test
@@ -158,8 +153,8 @@ public class StateMachineTest {
     transitions.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitions.add(BtoC);
-    final StateMachine machine = new StateMachine(transitions);
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    final StateMachine machine = new StateMachineImpl(transitions);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
     assertTrue(machine.transitionTo(toA.getToState()));
@@ -175,21 +170,21 @@ public class StateMachineTest {
 
     // C->INIT
     assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_HARD_RESET));
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
     assertTrue(machine.shutdown());
     assertFalse(machine.alive());
-    assertEquals(StateMachine.notStartedState, machine.readCurrentState());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
 
   public static final class States {
     public static State aState, bState, cState;
     static {
       try {
-        aState = new State("A");
-        bState = new State("B");
-        cState = new State("C");
+        aState = new State(Optional.of("A"));
+        bState = new State(Optional.of("B"));
+        cState = new State(Optional.of("C"));
       } catch (StateMachineException e) {
       }
     }
@@ -197,18 +192,18 @@ public class StateMachineTest {
 
   public static class TransitionNotStartedVsA extends Transition {
     public TransitionNotStartedVsA() throws StateMachineException {
-      super(StateMachine.notStartedState, States.aState);
+      super(StateMachineImpl.notStartedState, States.aState);
     }
 
     @Override
     public TransitionResult progress() {
-      logger.info(StateMachine.notStartedState.getName() + "->" + States.aState.getName());
+      logger.info(StateMachineImpl.notStartedState.getName() + "->" + States.aState.getName());
       return new TransitionResult(true, null, null);
     }
 
     @Override
     public TransitionResult regress() {
-      logger.info(States.aState.getName() + "->" + StateMachine.notStartedState.getName());
+      logger.info(States.aState.getName() + "->" + StateMachineImpl.notStartedState.getName());
       return new TransitionResult(true, null, null);
     }
   }
