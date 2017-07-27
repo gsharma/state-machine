@@ -30,7 +30,7 @@ public interface StateMachine {
    * 
    * Returns true iff the state transition was successful.
    */
-  boolean transitionTo(State nextState) throws StateMachineException;
+  boolean transitionTo(final State nextState) throws StateMachineException;
 
   /**
    * Rewind the state machine to either undo the last step/transition or reset it all the way to the
@@ -38,7 +38,7 @@ public interface StateMachine {
    * 
    * Returns true iff the state transition was successful.
    */
-  boolean rewind(RewindMode mode) throws StateMachineException;
+  boolean rewind(final RewindMode mode) throws StateMachineException;
 
   /**
    * Read/report the current state of the state machine.
@@ -64,5 +64,10 @@ public interface StateMachine {
    * Shutdown the state machine and clear all state flows and intermediate data structures.
    */
   boolean demolish() throws StateMachineException;
+
+  /**
+   * Print the potential route of state transitions.
+   */
+  String printStateTransitionRoute() throws StateMachineException;
 
 }

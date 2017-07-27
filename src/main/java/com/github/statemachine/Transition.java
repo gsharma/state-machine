@@ -7,8 +7,10 @@ public abstract class Transition {
   private final String reverseId;
   private final State fromState;
   private final State toState;
+  private final boolean resetMachineToInitOnFailure;
 
-  public Transition(final State fromState, final State toState) throws StateMachineException {
+  public Transition(final State fromState, final State toState, boolean resetMachineToInitOnFailure)
+      throws StateMachineException {
     if (fromState == null || toState == null) {
       throw new StateMachineException(Code.INVALID_STATE);
     }
@@ -16,6 +18,7 @@ public abstract class Transition {
     this.toState = toState;
     this.forwardId = StateMachineImpl.transitionId(fromState, toState, true);
     this.reverseId = StateMachineImpl.transitionId(fromState, toState, false);
+    this.resetMachineToInitOnFailure = resetMachineToInitOnFailure;
   }
 
   public String getForwardId() {
@@ -34,10 +37,15 @@ public abstract class Transition {
     return toState;
   }
 
+  public boolean resetMachineToInitOnFailure() {
+    return resetMachineToInitOnFailure;
+  }
+
   @Override
   public String toString() {
     return "Transition [forwardId=" + forwardId + ", reverseId=" + reverseId + ", fromState="
-        + fromState + ", toState=" + toState + "]";
+        + fromState + ", toState=" + toState + ", resetMachineToInitOnFailure="
+        + resetMachineToInitOnFailure + "]";
   }
 
   /**
@@ -55,4 +63,5 @@ public abstract class Transition {
    * initial transition state (toState), regress() will obviously fail.
    */
   public abstract TransitionResult regress();
+
 }

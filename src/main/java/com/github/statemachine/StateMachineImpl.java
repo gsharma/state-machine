@@ -183,6 +183,9 @@ public final class StateMachineImpl implements StateMachine {
           State currentState;
           State previousState;
           switch (mode) {
+            case NONE:
+              success = true;
+              break;
             case ONE_STEP:
               // check if current state is the init not started state
               currentState = readCurrentState();
@@ -261,7 +264,7 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public Transition findTranstion(String transitionId) throws StateMachineException {
+  public Transition findTranstion(final String transitionId) throws StateMachineException {
     Transition transition = null;
     try {
       if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
@@ -275,6 +278,23 @@ public final class StateMachineImpl implements StateMachine {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
     return transition;
+  }
+
+  @Override
+  public String printStateTransitionRoute() throws StateMachineException {
+    String route = null;
+    try {
+      if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          // TODO:
+        } finally {
+          readLock.unlock();
+        }
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    return route;
   }
 
   /**
@@ -317,6 +337,9 @@ public final class StateMachineImpl implements StateMachine {
                 logger.error(String.format("Failed to transition from %s to %s, %s", toState,
                     fromState, result));
               }
+              if (transition.resetMachineToInitOnFailure()) {
+                resetMachineToInitOnFailure();
+              }
             }
           } else {
             if (!rewinding) {
@@ -340,6 +363,21 @@ public final class StateMachineImpl implements StateMachine {
 
   static String transitionId(final State fromState, State toState, boolean forward) {
     return forward ? fromState.getId() + toState.getId() : toState.getId() + fromState.getId();
+  }
+
+  private void resetMachineToInitOnFailure() throws StateMachineException {
+    try {
+      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          stateFlowStack.clear();
+          pushNextState(notStartedState);
+        } finally {
+          writeLock.unlock();
+        }
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
   }
 
   private State popState() throws StateMachineException {
