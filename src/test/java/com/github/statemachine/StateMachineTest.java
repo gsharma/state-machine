@@ -47,7 +47,7 @@ public class StateMachineTest {
     assertEquals(BtoC.getToState(), machine.readCurrentState());
 
     assertTrue(machine.alive());
-    assertTrue(machine.shutdown());
+    assertTrue(machine.demolish());
     assertFalse(machine.alive());
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
@@ -97,7 +97,7 @@ public class StateMachineTest {
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
-    assertTrue(machine.shutdown());
+    assertTrue(machine.demolish());
     assertFalse(machine.alive());
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
@@ -139,7 +139,7 @@ public class StateMachineTest {
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
-    assertTrue(machine.shutdown());
+    assertTrue(machine.demolish());
     assertFalse(machine.alive());
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }
@@ -173,7 +173,7 @@ public class StateMachineTest {
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
-    assertTrue(machine.shutdown());
+    assertTrue(machine.demolish());
     assertFalse(machine.alive());
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
   }

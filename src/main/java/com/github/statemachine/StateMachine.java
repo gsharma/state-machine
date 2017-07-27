@@ -46,6 +46,16 @@ public interface StateMachine {
   State readCurrentState() throws StateMachineException;
 
   /**
+   * Lookup a transition by its id.
+   */
+  Transition findTranstion(final String transitionId) throws StateMachineException;
+
+  /**
+   * Reports the id of this StateMachine instance. You can have as many instances as you like.
+   */
+  String getId();
+
+  /**
    * Check if the state machine is alive.
    */
   boolean alive();
@@ -53,6 +63,6 @@ public interface StateMachine {
   /**
    * Shutdown the state machine and clear all state flows and intermediate data structures.
    */
-  boolean shutdown() throws StateMachineException;
+  boolean demolish() throws StateMachineException;
 
 }

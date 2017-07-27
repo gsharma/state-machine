@@ -4,6 +4,7 @@ import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +35,9 @@ import com.github.statemachine.StateMachineException.Code;
  */
 public final class StateMachineImpl implements StateMachine {
   private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
+
+  private final String id = UUID.randomUUID().toString();
+
   private final ReentrantReadWriteLock superLock = new ReentrantReadWriteLock(true);
   private final ReadLock readLock = superLock.readLock();
   private final WriteLock writeLock = superLock.writeLock();
@@ -43,11 +47,10 @@ public final class StateMachineImpl implements StateMachine {
   private final AtomicBoolean machineAlive = new AtomicBoolean();
 
   // Allow safer state rewinding
-  private final static Stack<State> stateFlowStack = new Stack<>();
+  private final Stack<State> stateFlowStack = new Stack<>();
 
   // K=fromState.id:toState.id, V=Transition
-  private final static ConcurrentMap<String, Transition> stateTransitionTable =
-      new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Transition> stateTransitionTable = new ConcurrentHashMap<>();
 
   public static State notStartedState;
   static {
@@ -80,13 +83,15 @@ public final class StateMachineImpl implements StateMachine {
           logger.info("Successfully hydrated stateTransitionTable: " + stateTransitionTable);
           pushNextState(notStartedState);
           machineAlive.set(true);
-          logger.info("Successfully fired up state machine");
+          logger.info("Successfully fired up state machine, id:" + id);
+
+          GlobalStateMachineHolder.allStateMachines.putIfAbsent(id, this);
         } finally {
           writeLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to curate state machine");
+            "Timed out while trying to curate state machine, id:" + id);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -94,9 +99,14 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public boolean shutdown() throws StateMachineException {
+  public String getId() {
+    return id;
+  }
+
+  @Override
+  public boolean demolish() throws StateMachineException {
     boolean success = false;
-    logger.info("Shutting down state machine");
+    logger.info("Demolishing state machine, id:" + id);
     try {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         if (machineAlive.compareAndSet(true, false)) {
@@ -104,16 +114,17 @@ public final class StateMachineImpl implements StateMachine {
             stateFlowStack.clear();
             pushNextState(notStartedState);
             stateTransitionTable.clear();
+            GlobalStateMachineHolder.allStateMachines.remove(id);
             logger.info("Drained stateTransitionTable, reset stateFlowStack to "
-                + notStartedState.getName() + " state");
-            logger.info("Successfully shut down state machine");
+                + notStartedState.getName() + " state, purged from globalStateMachineHolder");
+            logger.info("Successfully shut down state machine, id:" + id);
             success = true;
           } finally {
             writeLock.unlock();
           }
         } else {
           // was already shutdown
-          logger.info("Not shutting down an already shutdown state machine");
+          logger.info("Not shutting down an already shutdown state machine, id:" + id);
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -140,8 +151,7 @@ public final class StateMachineImpl implements StateMachine {
           }
           currentState = popState();
           try {
-            boolean isForwardTransition =
-                TransitionUtils.isForwardTransition(currentState, nextState);
+            boolean isForwardTransition = isForwardTransition(id, currentState, nextState);
             success = transitionTo(currentState, nextState, !isForwardTransition);
           } finally {
             // in case of transition failure, remember to revert the stateFlowStack
@@ -250,6 +260,23 @@ public final class StateMachineImpl implements StateMachine {
     return currentState;
   }
 
+  @Override
+  public Transition findTranstion(String transitionId) throws StateMachineException {
+    Transition transition = null;
+    try {
+      if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          transition = stateTransitionTable.get(transitionId);
+        } finally {
+          readLock.unlock();
+        }
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    return transition;
+  }
+
   /**
    * Transitions the machine from->to states. Note that if the transition is successful, the
    * stateFlowStack will have the toState at the top reflecting the current state of the machine.
@@ -271,7 +298,7 @@ public final class StateMachineImpl implements StateMachine {
         }
         try {
           final Transition transition =
-              stateTransitionTable.get(TransitionUtils.transitionId(fromState, toState, true));
+              stateTransitionTable.get(transitionId(fromState, toState, true));
           if (transition != null) {
             final TransitionResult result =
                 transition.getFromState().equals(fromState) ? transition.progress()
@@ -309,6 +336,10 @@ public final class StateMachineImpl implements StateMachine {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
     return success;
+  }
+
+  static String transitionId(final State fromState, State toState, boolean forward) {
+    return forward ? fromState.getId() + toState.getId() : toState.getId() + fromState.getId();
   }
 
   private State popState() throws StateMachineException {
@@ -352,32 +383,31 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  static final class TransitionUtils {
-    public static String transitionId(final State fromState, State toState, boolean forward) {
-      return forward ? fromState.getId() + toState.getId() : toState.getId() + fromState.getId();
-    }
-
-    /**
-     * TODO: this needs to be fixed, cannot have a stateful function as a static utility - it relies
-     * on a hydrated stateTransitionTable specific to a particular state machine instance.
-     */
-    public static boolean isForwardTransition(final State stateOne, final State stateTwo)
-        throws StateMachineException {
-      boolean forward = false;
-      final String transitionId = TransitionUtils.transitionId(stateOne, stateTwo, true);
-      final Transition transition = stateTransitionTable.get(transitionId);
-      if (transition != null) {
-        forward = transition.getForwardId().equals(transitionId);
-        if (!forward) {
-          if (!transition.getReverseId().equals(transitionId)) {
-            throw new StateMachineException(Code.ILLEGAL_TRANSITION);
-          }
+  private boolean isForwardTransition(final String stateMachineId, final State stateOne,
+      final State stateTwo) throws StateMachineException {
+    boolean forward = false;
+    final String transitionId = transitionId(stateOne, stateTwo, true);
+    final StateMachine stateMachine = GlobalStateMachineHolder.allStateMachines.get(stateMachineId);
+    final Transition transition =
+        stateMachine != null ? stateMachine.findTranstion(transitionId) : null;
+    if (transition != null) {
+      forward = transition.getForwardId().equals(transitionId);
+      if (!forward) {
+        if (!transition.getReverseId().equals(transitionId)) {
+          throw new StateMachineException(Code.ILLEGAL_TRANSITION);
         }
       }
-      return forward;
     }
+    return forward;
+  }
 
-    private TransitionUtils() {}
+  private static final class GlobalStateMachineHolder {
+    // TODO: undo this fugly hack, so terrible and pathetic
+    private static final ConcurrentMap<String, StateMachine> allStateMachines =
+        new ConcurrentHashMap<>();
+
+
+    private GlobalStateMachineHolder() {}
   }
 
 }
