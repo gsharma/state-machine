@@ -47,7 +47,7 @@ public interface StateMachine {
   /**
    * On failing a transition, reset the state machine to INIT state
    */
-  void resetStateMachineOnFailure(boolean resetStateMachineOnFailure);
+  void resetMachineOnTransitionFailure(boolean resetStateMachineOnFailure);
 
   /**
    * Read/report the current state of the state machine.

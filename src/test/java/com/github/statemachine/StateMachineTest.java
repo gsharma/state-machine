@@ -12,6 +12,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 
+import com.github.statemachine.StateMachineException.Code;
+
 /**
  * Tests to maintain the sanity and correctness of StateMachine.
  */
@@ -45,6 +47,43 @@ public class StateMachineTest {
     // B->C
     assertTrue(machine.transitionTo(BtoC.getToState()));
     assertEquals(BtoC.getToState(), machine.readCurrentState());
+
+    assertTrue(machine.alive());
+    assertTrue(machine.demolish());
+    assertFalse(machine.alive());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
+  }
+
+  @Test
+  public void testStateMachineFlowFailure() throws StateMachineException {
+    final List<Transition> transitions = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitions.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitions.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitions.add(BtoC);
+    final TransitionCVsD CtoD = new TransitionCVsD();
+    transitions.add(CtoD);
+    final StateMachine machine = new StateMachineImpl(transitions);
+    machine.resetMachineOnTransitionFailure(true);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
+
+    // INIT->A
+    assertTrue(machine.transitionTo(toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState());
+
+    // A->B
+    assertTrue(machine.transitionTo(AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState());
+
+    // B->C
+    assertTrue(machine.transitionTo(BtoC.getToState()));
+    assertEquals(BtoC.getToState(), machine.readCurrentState());
+
+    // C->D will blow up, machine is instructed to reset
+    assertFalse(machine.transitionTo(CtoD.getToState()));
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     assertTrue(machine.alive());
     assertTrue(machine.demolish());
@@ -179,12 +218,13 @@ public class StateMachineTest {
   }
 
   public static final class States {
-    public static State aState, bState, cState;
+    public static State aState, bState, cState, dState;
     static {
       try {
         aState = new State(Optional.of("A"));
         bState = new State(Optional.of("B"));
         cState = new State(Optional.of("C"));
+        dState = new State(Optional.of("D"));
       } catch (StateMachineException e) {
       }
     }
@@ -241,6 +281,24 @@ public class StateMachineTest {
     public TransitionResult regress() {
       logger.info(States.cState.getName() + "->" + States.bState.getName());
       return new TransitionResult(true, null, null);
+    }
+  }
+
+  public static class TransitionCVsD extends Transition {
+    public TransitionCVsD() throws StateMachineException {
+      super(States.cState, States.dState);
+    }
+
+    @Override
+    public TransitionResult progress() {
+      logger.info(States.cState.getName() + "->" + States.dState.getName());
+      return new TransitionResult(false, null, new StateMachineException(Code.TRANSITION_FAILURE));
+    }
+
+    @Override
+    public TransitionResult regress() {
+      logger.info(States.cState.getName() + "->" + States.bState.getName());
+      return new TransitionResult(false, null, new StateMachineException(Code.TRANSITION_FAILURE));
     }
   }
 

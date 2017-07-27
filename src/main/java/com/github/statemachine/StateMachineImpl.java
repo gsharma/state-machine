@@ -118,8 +118,8 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public void resetStateMachineOnFailure(final boolean resetStateMachineOnFailure) {
-    this.resetMachineToInitOnFailure = resetStateMachineOnFailure;
+  public void resetMachineOnTransitionFailure(final boolean resetMachineOnTransitionFailure) {
+    this.resetMachineToInitOnFailure = resetMachineOnTransitionFailure;
   }
 
   @Override
@@ -129,22 +129,18 @@ public final class StateMachineImpl implements StateMachine {
     machineAlive();
     try {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        if (machineAlive.compareAndSet(true, false)) {
-          try {
-            stateFlowStack.clear();
-            pushNextState(notStartedState);
-            stateTransitionTable.clear();
-            GlobalStateMachineHolder.allStateMachines.remove(machineId);
-            logger.info("Drained stateTransitionTable, reset stateFlowStack to "
-                + notStartedState.getName() + " state, purged from globalStateMachineHolder");
-            logger.info("Successfully shut down state machine, id:" + machineId);
-            success = true;
-          } finally {
-            writeLock.unlock();
-          }
-        } else {
-          // was already shutdown
-          logger.info("Not shutting down an already shutdown state machine, id:" + machineId);
+        machineAlive.set(false);
+        try {
+          stateFlowStack.clear();
+          pushNextState(notStartedState);
+          stateTransitionTable.clear();
+          GlobalStateMachineHolder.allStateMachines.remove(machineId);
+          logger.info("Drained stateTransitionTable, reset stateFlowStack to "
+              + notStartedState.getName() + " state, purged from globalStateMachineHolder");
+          logger.info("Successfully shut down state machine, id:" + machineId);
+          success = true;
+        } finally {
+          writeLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -165,7 +161,7 @@ public final class StateMachineImpl implements StateMachine {
         try {
           State currentState = readCurrentState();
           if (currentState == null || nextState == null || currentState.equals(nextState)) {
-            logger.warn(String.format("Failed to transition from current:%s to next:%s",
+            logger.error(String.format("Failed to transition from current:%s to next:%s",
                 currentState, nextState));
             return success;
           }
@@ -177,7 +173,11 @@ public final class StateMachineImpl implements StateMachine {
             // in case of transition failure, remember to revert the stateFlowStack
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
-              pushNextState(currentState);
+              if (resetMachineToInitOnFailure) {
+                resetMachineToInitOnTransitionFailure();
+              } else {
+                pushNextState(currentState);
+              }
             }
           }
         } finally {
@@ -216,6 +216,9 @@ public final class StateMachineImpl implements StateMachine {
               currentState = popState();
               previousState = popState();
               success = transitionTo(currentState, previousState, true);
+              if (!success && resetMachineToInitOnFailure) {
+                resetMachineToInitOnTransitionFailure();
+              }
               break;
             case ALL_THE_WAY_STEP_WISE:
               // check if current state is the init not started state
@@ -228,8 +231,12 @@ public final class StateMachineImpl implements StateMachine {
                 } finally {
                   // in case of transition failure, remember to revert the stateFlowStack
                   if (!success) {
-                    pushNextState(previousState);
-                    pushNextState(currentState);
+                    if (resetMachineToInitOnFailure) {
+                      resetMachineToInitOnTransitionFailure();
+                    } else {
+                      pushNextState(previousState);
+                      pushNextState(currentState);
+                    }
                     break;
                   }
                 }
@@ -241,6 +248,7 @@ public final class StateMachineImpl implements StateMachine {
                 // TODO: log
                 return success;
               }
+              resetMachineToInitOnTransitionFailure();
               stateFlowStack.clear();
               pushNextState(notStartedState);
               success = true;
@@ -273,6 +281,8 @@ public final class StateMachineImpl implements StateMachine {
       if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           currentState = stateFlowStack.peek();
+        } catch (EmptyStackException emptyStack) {
+          // do nothing, returned currentState should be null
         } finally {
           readLock.unlock();
         }
@@ -285,17 +295,20 @@ public final class StateMachineImpl implements StateMachine {
 
   @Override
   public Transition findTranstion(final String transitionId) throws StateMachineException {
-    Transition transition = null;
     try {
-      if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          transition = stateTransitionTable.get(transitionId);
-        } finally {
-          readLock.unlock();
-        }
+      if (!readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to lookup transition instate machine");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+
+    Transition transition = null;
+    try {
+      transition = stateTransitionTable.get(transitionId);
+    } finally {
+      readLock.unlock();
     }
     return transition;
   }
@@ -329,54 +342,51 @@ public final class StateMachineImpl implements StateMachine {
   private boolean transitionTo(final State fromState, final State toState, boolean rewinding)
       throws StateMachineException {
     boolean success = false;
-    machineAlive();
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        if (fromState == null || toState == null) {
-          // TODO: log this
-          return success;
-        }
-        try {
-          final Transition transition =
-              stateTransitionTable.get(transitionId(fromState, toState, true));
-          if (transition != null) {
-            final TransitionResult result =
-                transition.getFromState().equals(fromState) ? transition.progress()
-                    : transition.regress();
-            if (result != null && result.isSuccessful()) {
-              if (!rewinding) {
-                pushNextState(fromState);
-              }
-              pushNextState(toState);
-              success = true;
-            } else {
-              if (!rewinding) {
-                logger.error(String.format("Failed to transition from %s to %s, %s", fromState,
-                    toState, result));
-              } else {
-                logger.error(String.format("Failed to transition from %s to %s, %s", toState,
-                    fromState, result));
-              }
-              if (resetMachineToInitOnFailure) {
-                resetMachineToInitOnTransitionFailure();
-              }
-            }
-          } else {
-            if (!rewinding) {
-              logger.error(String.format("Failed to transition from %s to %s", fromState, toState));
-            } else {
-              logger.error(String.format("Failed to transition from %s to %s", toState, fromState));
-            }
-          }
-        } finally {
-          writeLock.unlock();
-        }
-      } else {
+      machineAlive();
+      if (!writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to transition state machine");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+
+    try {
+      if (fromState == null || toState == null) {
+        // TODO: log this
+        return success;
+      }
+      final Transition transition =
+          stateTransitionTable.get(transitionId(fromState, toState, true));
+      if (transition != null) {
+        final TransitionResult result =
+            transition.getFromState().equals(fromState) ? transition.progress()
+                : transition.regress();
+        if (result != null && result.isSuccessful()) {
+          if (!rewinding) {
+            pushNextState(fromState);
+          }
+          pushNextState(toState);
+          success = true;
+        } else {
+          if (!rewinding) {
+            logger.error(String.format("Failed to transition from %s to %s, %s", fromState, toState,
+                result));
+          } else {
+            logger.error(String.format("Failed to transition from %s to %s, %s", toState, fromState,
+                result));
+          }
+        }
+      } else {
+        if (!rewinding) {
+          logger.error(String.format("Failed to transition from %s to %s", fromState, toState));
+        } else {
+          logger.error(String.format("Failed to transition from %s to %s", toState, fromState));
+        }
+      }
+    } finally {
+      writeLock.unlock();
     }
     return success;
   }
