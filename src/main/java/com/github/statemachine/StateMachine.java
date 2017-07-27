@@ -20,6 +20,10 @@ package com.github.statemachine;
  * easier demonstration of machine functionality. It is not meant as a way to extend or create
  * custom state machines.<br>
  * 
+ * 6. state transitions can be setup such that a failure of any transition in either forward or
+ * backward direction triggers an auto-reset of the machine to its init state. Note that this will
+ * not entail users having to rehydrate the transitions table in the machine<br>
+ * 
  * @author gaurav
  */
 public interface StateMachine {

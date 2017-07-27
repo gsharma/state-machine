@@ -23,30 +23,38 @@ import com.github.statemachine.StateMachineException.Code;
  * 
  * Notes for users:<br>
  * 1. this FSM instance is thread-safe<br>
+ * 
  * 2. it is designed to not be singleton within a process, so, if there's a desire to have many
  * state machines, just create as many as needed<br>
+ * 
  * 3. for every instance of FSM, various flows are meant to be reused. There's no need to make a new
  * FSM instance for the same flow every time.<br>
+ * 
  * 4. expanding on #3, if a state machine is running and going through various state transitions,
  * the FSM itself does not expect any thread affinity ( meaning the caller does not have to use the
  * same thread to change states).<br>
+ * 
+ * 5. state transitions can be setup such that a failure of any transition in either forward or
+ * backward direction triggers an auto-reset of the machine to its init state. Note that this will
+ * not entail users having to rehydrate the transitions table in the machine<br>
  * 
  * @author gaurav
  */
 public final class StateMachineImpl implements StateMachine {
   private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
 
-  private final String id = UUID.randomUUID().toString();
+  private final String machineId = UUID.randomUUID().toString();
 
   private final ReentrantReadWriteLock superLock = new ReentrantReadWriteLock(true);
   private final ReadLock readLock = superLock.readLock();
   private final WriteLock writeLock = superLock.writeLock();
 
+  // dumb hardcoded value in code, oh well
   private final static long lockAcquisitionMillis = 100L;
 
   private final AtomicBoolean machineAlive = new AtomicBoolean();
 
-  // Allow safer state rewinding
+  // allow safer state rewinding
   private final Stack<State> stateFlowStack = new Stack<>();
 
   // K=fromState.id:toState.id, V=Transition
@@ -83,15 +91,15 @@ public final class StateMachineImpl implements StateMachine {
           logger.info("Successfully hydrated stateTransitionTable: " + stateTransitionTable);
           pushNextState(notStartedState);
           machineAlive.set(true);
-          logger.info("Successfully fired up state machine, id:" + id);
+          logger.info("Successfully fired up state machine, id:" + machineId);
 
-          GlobalStateMachineHolder.allStateMachines.putIfAbsent(id, this);
+          GlobalStateMachineHolder.allStateMachines.putIfAbsent(machineId, this);
         } finally {
           writeLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to curate state machine, id:" + id);
+            "Timed out while trying to curate state machine, id:" + machineId);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -100,13 +108,14 @@ public final class StateMachineImpl implements StateMachine {
 
   @Override
   public String getId() {
-    return id;
+    return machineId;
   }
 
   @Override
   public boolean demolish() throws StateMachineException {
     boolean success = false;
-    logger.info("Demolishing state machine, id:" + id);
+    logger.info("Demolishing state machine, id:" + machineId);
+    machineAlive();
     try {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         if (machineAlive.compareAndSet(true, false)) {
@@ -114,17 +123,17 @@ public final class StateMachineImpl implements StateMachine {
             stateFlowStack.clear();
             pushNextState(notStartedState);
             stateTransitionTable.clear();
-            GlobalStateMachineHolder.allStateMachines.remove(id);
+            GlobalStateMachineHolder.allStateMachines.remove(machineId);
             logger.info("Drained stateTransitionTable, reset stateFlowStack to "
                 + notStartedState.getName() + " state, purged from globalStateMachineHolder");
-            logger.info("Successfully shut down state machine, id:" + id);
+            logger.info("Successfully shut down state machine, id:" + machineId);
             success = true;
           } finally {
             writeLock.unlock();
           }
         } else {
           // was already shutdown
-          logger.info("Not shutting down an already shutdown state machine, id:" + id);
+          logger.info("Not shutting down an already shutdown state machine, id:" + machineId);
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -151,7 +160,7 @@ public final class StateMachineImpl implements StateMachine {
           }
           currentState = popState();
           try {
-            boolean isForwardTransition = isForwardTransition(id, currentState, nextState);
+            boolean isForwardTransition = isForwardTransition(machineId, currentState, nextState);
             success = transitionTo(currentState, nextState, !isForwardTransition);
           } finally {
             // in case of transition failure, remember to revert the stateFlowStack
@@ -338,7 +347,7 @@ public final class StateMachineImpl implements StateMachine {
                     fromState, result));
               }
               if (transition.resetMachineToInitOnFailure()) {
-                resetMachineToInitOnFailure();
+                resetMachineToInitOnTransitionFailure();
               }
             }
           } else {
@@ -365,7 +374,8 @@ public final class StateMachineImpl implements StateMachine {
     return forward ? fromState.getId() + toState.getId() : toState.getId() + fromState.getId();
   }
 
-  private void resetMachineToInitOnFailure() throws StateMachineException {
+  private void resetMachineToInitOnTransitionFailure() throws StateMachineException {
+    machineAlive();
     try {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
@@ -417,7 +427,8 @@ public final class StateMachineImpl implements StateMachine {
 
   private void machineAlive() throws StateMachineException {
     if (!machineAlive.get()) {
-      throw new StateMachineException(Code.MACHINE_NOT_ALIVE);
+      throw new StateMachineException(Code.MACHINE_NOT_ALIVE,
+          "State machine id:" + machineId + " is not alive");
     }
   }
 
