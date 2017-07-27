@@ -39,7 +39,10 @@ import com.github.statemachine.StateMachineException.Code;
  * not entail users having to rehydrate the transitions table in the machine<br>
  * 
  * 6. the State and Transition objects themselves are intended to be stateless. All state management
- * is done within the confines of the machine itself and doesn't spill out<br>
+ * is done within the confines of the machine itself and doesn't spill out. The underlying idea is
+ * that state and transition objects should be reusable across state machines eg. given states a, b,
+ * c and transitions tAB, tBA, tBC, tCA, one could easily construct 2 different machines m1 and m2
+ * with a subset of these states (a,b), (b,c), or (c,a).<br>
  * 
  * @author gaurav
  */
@@ -99,7 +102,7 @@ public final class StateMachineImpl implements StateMachine {
           machineAlive.set(true);
           logger.info("Successfully fired up state machine, id:" + machineId);
 
-          GlobalStateMachineHolder.allStateMachines.putIfAbsent(machineId, this);
+          StateMachineRegistry.addMachine(this);
         } finally {
           writeLock.unlock();
         }
@@ -134,7 +137,7 @@ public final class StateMachineImpl implements StateMachine {
           stateFlowStack.clear();
           pushNextState(notStartedState);
           stateTransitionTable.clear();
-          GlobalStateMachineHolder.allStateMachines.remove(machineId);
+          StateMachineRegistry.dropMachine(machineId);
           logger.info("Drained stateTransitionTable, reset stateFlowStack to "
               + notStartedState.getName() + " state, purged from globalStateMachineHolder");
           logger.info("Successfully shut down state machine, id:" + machineId);
@@ -457,7 +460,7 @@ public final class StateMachineImpl implements StateMachine {
       final State stateTwo) throws StateMachineException {
     boolean forward = false;
     final String transitionId = transitionId(stateOne, stateTwo, true);
-    final StateMachine stateMachine = GlobalStateMachineHolder.allStateMachines.get(stateMachineId);
+    final StateMachine stateMachine = StateMachineRegistry.lookupMachine(stateMachineId);
     final Transition transition =
         stateMachine != null ? stateMachine.findTranstion(transitionId) : null;
     if (transition != null) {
@@ -469,15 +472,6 @@ public final class StateMachineImpl implements StateMachine {
       }
     }
     return forward;
-  }
-
-  private static final class GlobalStateMachineHolder {
-    // TODO: undo this fugly hack, so terrible and pathetic
-    private static final ConcurrentMap<String, StateMachine> allStateMachines =
-        new ConcurrentHashMap<>();
-
-
-    private GlobalStateMachineHolder() {}
   }
 
 }

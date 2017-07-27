@@ -24,6 +24,12 @@ package com.github.statemachine;
  * backward direction triggers an auto-reset of the machine to its init state. Note that this will
  * not entail users having to rehydrate the transitions table in the machine<br>
  * 
+ * 7. the State and Transition objects themselves are intended to be stateless. All state management
+ * is done within the confines of the machine itself and doesn't spill out. The underlying idea is
+ * that state and transition objects should be reusable across state machines eg. given states a, b,
+ * c and transitions tAB, tBA, tBC, tCA, one could easily construct 2 different machines m1 and m2
+ * with a subset of these states (a,b), (b,c), or (c,a).<br>
+ * 
  * @author gaurav
  */
 public interface StateMachine {
