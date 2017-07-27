@@ -38,11 +38,16 @@ public interface StateMachine {
 
   /**
    * Rewind the state machine to either undo the last step/transition or reset it all the way to the
-   * very beginning and to the NOT_STARTED state.
+   * very beginning and to the INIT state.
    * 
    * Returns true iff the state transition was successful.
    */
   boolean rewind(final RewindMode mode) throws StateMachineException;
+
+  /**
+   * On failing a transition, reset the state machine to INIT state
+   */
+  void resetStateMachineOnFailure(boolean resetStateMachineOnFailure);
 
   /**
    * Read/report the current state of the state machine.

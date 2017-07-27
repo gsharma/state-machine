@@ -38,6 +38,9 @@ import com.github.statemachine.StateMachineException.Code;
  * backward direction triggers an auto-reset of the machine to its init state. Note that this will
  * not entail users having to rehydrate the transitions table in the machine<br>
  * 
+ * 6. the State and Transition objects themselves are intended to be stateless. All state management
+ * is done within the confines of the machine itself and doesn't spill out<br>
+ * 
  * @author gaurav
  */
 public final class StateMachineImpl implements StateMachine {
@@ -59,6 +62,8 @@ public final class StateMachineImpl implements StateMachine {
 
   // K=fromState.id:toState.id, V=Transition
   private final ConcurrentMap<String, Transition> stateTransitionTable = new ConcurrentHashMap<>();
+
+  private boolean resetMachineToInitOnFailure;
 
   public static State notStartedState;
   static {
@@ -90,6 +95,7 @@ public final class StateMachineImpl implements StateMachine {
           }
           logger.info("Successfully hydrated stateTransitionTable: " + stateTransitionTable);
           pushNextState(notStartedState);
+
           machineAlive.set(true);
           logger.info("Successfully fired up state machine, id:" + machineId);
 
@@ -109,6 +115,11 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public String getId() {
     return machineId;
+  }
+
+  @Override
+  public void resetStateMachineOnFailure(final boolean resetStateMachineOnFailure) {
+    this.resetMachineToInitOnFailure = resetStateMachineOnFailure;
   }
 
   @Override
@@ -346,7 +357,7 @@ public final class StateMachineImpl implements StateMachine {
                 logger.error(String.format("Failed to transition from %s to %s, %s", toState,
                     fromState, result));
               }
-              if (transition.resetMachineToInitOnFailure()) {
+              if (resetMachineToInitOnFailure) {
                 resetMachineToInitOnTransitionFailure();
               }
             }

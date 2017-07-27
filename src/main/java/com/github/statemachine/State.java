@@ -8,8 +8,10 @@ import com.github.statemachine.StateMachineException.Code;
 
 public final class State {
   private final String id = UUID.randomUUID().toString();
+
+  // name and customMetadata are optional
   final static int maxStateNameLength = 20;
-  private String name; // optional
+  private String name = "UNDEF"; // optional
   private Optional<Map<Object, Object>> customMetadata = Optional.empty();
 
   public State(final Optional<String> name) throws StateMachineException {

@@ -192,7 +192,7 @@ public class StateMachineTest {
 
   public static class TransitionNotStartedVsA extends Transition {
     public TransitionNotStartedVsA() throws StateMachineException {
-      super(StateMachineImpl.notStartedState, States.aState, false);
+      super(StateMachineImpl.notStartedState, States.aState);
     }
 
     @Override
@@ -210,7 +210,7 @@ public class StateMachineTest {
 
   public static class TransitionAVsB extends Transition {
     public TransitionAVsB() throws StateMachineException {
-      super(States.aState, States.bState, false);
+      super(States.aState, States.bState);
     }
 
     @Override
@@ -228,7 +228,7 @@ public class StateMachineTest {
 
   public static class TransitionBVsC extends Transition {
     public TransitionBVsC() throws StateMachineException {
-      super(States.bState, States.cState, false);
+      super(States.bState, States.cState);
     }
 
     @Override
