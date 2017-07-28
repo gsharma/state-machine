@@ -163,8 +163,13 @@ public final class StateMachineImpl implements StateMachine {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           State currentState = readCurrentState();
+          if (currentState == null || nextState == null) {
+            logger.error(String.format("Invalid transition between null states: %s->%s",
+                currentState, nextState));
+            return success;
+          }
           if (currentState == null || nextState == null || currentState.equals(nextState)) {
-            logger.error(String.format("Failed to transition from current:%s to next:%s",
+            logger.error(String.format("Invalid transition between same state: %s->%s",
                 currentState, nextState));
             return success;
           }
@@ -172,6 +177,10 @@ public final class StateMachineImpl implements StateMachine {
           try {
             boolean isForwardTransition = isForwardTransition(machineId, currentState, nextState);
             success = transitionTo(currentState, nextState, !isForwardTransition);
+            if (success) {
+              logger.info(String.format("Successfully transitioned from %s->%s",
+                  currentState.getName(), nextState.getName()));
+            }
           } finally {
             // in case of transition failure, remember to revert the stateFlowStack
             // TODO: log reverting the state of the stateFlowStack
@@ -374,18 +383,20 @@ public final class StateMachineImpl implements StateMachine {
           success = true;
         } else {
           if (!rewinding) {
-            logger.error(String.format("Failed to transition from %s to %s, %s", fromState, toState,
-                result));
+            logger.error(String.format("Failed to transition to transition from %s to %s, %s",
+                fromState, toState, result));
           } else {
-            logger.error(String.format("Failed to transition from %s to %s, %s", toState, fromState,
-                result));
+            logger.error(String.format("Failed to transition to transition from %s to %s, %s",
+                toState, fromState, result));
           }
         }
       } else {
         if (!rewinding) {
-          logger.error(String.format("Failed to transition from %s to %s", fromState, toState));
+          logger.error(
+              String.format("Failed to lookup transition from %s to %s", fromState, toState));
         } else {
-          logger.error(String.format("Failed to transition from %s to %s", toState, fromState));
+          logger.error(
+              String.format("Failed to lookup transition from %s to %s", toState, fromState));
         }
       }
     } finally {

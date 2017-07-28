@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -210,6 +211,85 @@ public class StateMachineTest {
     // C->INIT
     assertTrue(machine.rewind(RewindMode.ALL_THE_WAY_HARD_RESET));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
+
+    assertTrue(machine.alive());
+    assertTrue(machine.demolish());
+    assertFalse(machine.alive());
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
+  }
+
+  @Test
+  public void testStateMachineThreadSafety() throws Exception {
+    final List<Transition> transitions = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitions.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitions.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitions.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitions);
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
+
+    final AtomicInteger toACounterSuccess = new AtomicInteger();
+    final AtomicInteger toACounterFailure = new AtomicInteger();
+    final AtomicInteger AtoBCounterSuccess = new AtomicInteger();
+    final AtomicInteger AtoBCounterFailure = new AtomicInteger();
+    final AtomicInteger BtoCCounterSuccess = new AtomicInteger();
+    final AtomicInteger BtoCCounterFailure = new AtomicInteger();
+    final Runnable transitionWorker = new Runnable() {
+      @Override
+      public void run() {
+        try {
+          // INIT->A
+          boolean success = machine.transitionTo(toA.getToState());
+          success &= toA.getToState() == machine.readCurrentState();
+          if (success) {
+            toACounterSuccess.incrementAndGet();
+          } else {
+            toACounterFailure.incrementAndGet();
+          }
+
+          // A->B
+          success = machine.transitionTo(AtoB.getToState());
+          success &= AtoB.getToState() == machine.readCurrentState();
+          if (success) {
+            AtoBCounterSuccess.incrementAndGet();
+          } else {
+            AtoBCounterFailure.incrementAndGet();
+          }
+
+          // B->C
+          success = machine.transitionTo(BtoC.getToState());
+          success &= BtoC.getToState() == machine.readCurrentState();
+          if (success) {
+            BtoCCounterSuccess.incrementAndGet();
+          } else {
+            BtoCCounterFailure.incrementAndGet();
+          }
+        } catch (StateMachineException exception) {
+        }
+      }
+    };
+
+    int workerCount = 10;
+    final List<Thread> workers = new ArrayList<>(workerCount);
+    for (int iter = 0; iter < workerCount; iter++) {
+      final Thread worker = new Thread(transitionWorker, "transition-worker-" + iter);
+      workers.add(worker);
+    }
+    for (final Thread worker : workers) {
+      worker.start();
+    }
+    for (final Thread worker : workers) {
+      worker.join();
+    }
+
+    assertEquals(1, toACounterSuccess.get());
+    assertEquals(workerCount - 1, toACounterFailure.get());
+    assertEquals(1, AtoBCounterSuccess.get());
+    assertEquals(workerCount - 1, AtoBCounterFailure.get());
+    assertEquals(1, BtoCCounterSuccess.get());
+    assertEquals(workerCount - 1, BtoCCounterFailure.get());
 
     assertTrue(machine.alive());
     assertTrue(machine.demolish());
