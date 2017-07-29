@@ -1,7 +1,10 @@
 package com.github.statemachine;
 
 /**
- * A simple Finite State Machine.
+ * A simple Finite State Machine. Depending on how the transitions are implemented, this machine may
+ * be setup as either deterministic or non-deterministic. There's nothing that forces the user's
+ * hand one way or the other. Typical real world state machines are not so simplistic as to be
+ * deterministic.
  * 
  * Notes for users:<br>
  * 1. this FSM instance is thread-safe<br>

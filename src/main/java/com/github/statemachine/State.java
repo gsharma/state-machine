@@ -6,7 +6,11 @@ import java.util.UUID;
 
 import com.github.statemachine.StateMachineException.Code;
 
+/**
+ * This object represents immutable metadata about a state.
+ */
 public final class State {
+  // auto-generated
   private final String id = UUID.randomUUID().toString();
 
   // name and customMetadata are optional
@@ -14,6 +18,9 @@ public final class State {
   private String name = "UNDEF"; // optional
   private Optional<Map<Object, Object>> customMetadata = Optional.empty();
 
+  /**
+   * State name is optional
+   */
   public State(final Optional<String> name) throws StateMachineException {
     if (name != null && name.isPresent()) {
       if (name.get().trim().length() <= maxStateNameLength) {

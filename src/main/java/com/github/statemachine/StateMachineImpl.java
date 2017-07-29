@@ -102,7 +102,7 @@ public final class StateMachineImpl implements StateMachine {
           machineAlive.set(true);
           logger.info("Successfully fired up state machine, id:" + machineId);
 
-          StateMachineRegistry.addMachine(this);
+          StateMachineRegistry.register(this);
         } finally {
           writeLock.unlock();
         }
@@ -137,7 +137,7 @@ public final class StateMachineImpl implements StateMachine {
           stateFlowStack.clear();
           pushNextState(notStartedState);
           stateTransitionTable.clear();
-          StateMachineRegistry.dropMachine(machineId);
+          StateMachineRegistry.unregister(machineId);
           logger.info("Drained stateTransitionTable, reset stateFlowStack to "
               + notStartedState.getName() + " state, purged from globalStateMachineHolder");
           logger.info("Successfully shut down state machine, id:" + machineId);
@@ -215,9 +215,6 @@ public final class StateMachineImpl implements StateMachine {
           State currentState;
           State previousState;
           switch (mode) {
-            case NONE:
-              success = true;
-              break;
             case ONE_STEP:
               // check if current state is the init not started state
               currentState = readCurrentState();
@@ -471,7 +468,7 @@ public final class StateMachineImpl implements StateMachine {
       final State stateTwo) throws StateMachineException {
     boolean forward = false;
     final String transitionId = transitionId(stateOne, stateTwo, true);
-    final StateMachine stateMachine = StateMachineRegistry.lookupMachine(stateMachineId);
+    final StateMachine stateMachine = StateMachineRegistry.lookup(stateMachineId);
     final Transition transition =
         stateMachine != null ? stateMachine.findTranstion(transitionId) : null;
     if (transition != null) {

@@ -10,17 +10,18 @@ final class StateMachineRegistry {
   private static final ConcurrentMap<String, StateMachine> allStateMachines =
       new ConcurrentHashMap<>();
 
-  static void addMachine(final StateMachine stateMachine) {
+  static void register(final StateMachine stateMachine) {
     allStateMachines.putIfAbsent(stateMachine.getId(), stateMachine);
   }
 
-  static void dropMachine(final String stateMachineId) {
+  static void unregister(final String stateMachineId) {
     allStateMachines.remove(stateMachineId);
   }
 
-  static StateMachine lookupMachine(final String stateMachineId) {
+  static StateMachine lookup(final String stateMachineId) {
     return allStateMachines.get(stateMachineId);
   }
 
   private StateMachineRegistry() {}
+
 }
