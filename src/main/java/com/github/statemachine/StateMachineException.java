@@ -32,7 +32,7 @@ public final class StateMachineException extends Exception {
                         "State name cannot be null or greater than " + State.maxStateNameLength
                             + " characters"), INVALID_STATE(
                                 "Null state is invalid"), INVALID_TRANSITIONS(
-                                    "Transition is null or empty"), ILLEGAL_TRANSITION(
+                                    "Transitions are null or empty"), ILLEGAL_TRANSITION(
                                         "Attempted transition between from->to states is illegal");
 
     private String description;
