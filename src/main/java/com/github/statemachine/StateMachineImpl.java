@@ -60,12 +60,15 @@ public final class StateMachineImpl implements StateMachine {
 
   private final AtomicBoolean machineAlive = new AtomicBoolean();
 
-  // allow safer state rewinding
-  private final Stack<State> stateFlowStack = new Stack<>();
-
-  // K=fromState.id:toState.id, V=Transition
+  // K=fromState.id:toState.id, V=TransitionFunctor. This table is either fully hydrated or fully
+  // dehydrated. It is never modified any differently.
   private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
       new ConcurrentHashMap<>();
+
+  // allow safer state rewinding. Note that apart from the stateFlowStack, there is no modifiable
+  // transient state held by the state machine. The stateTransitionTable is either completely filled
+  // or completely drained but rarely ever modified other than these 2 terminal states.
+  private final Stack<State> stateFlowStack = new Stack<>();
 
   private boolean resetMachineToInitOnFailure;
 
@@ -328,19 +331,7 @@ public final class StateMachineImpl implements StateMachine {
 
   @Override
   public String printStateTransitionRoute() throws StateMachineException {
-    String route = null;
-    try {
-      if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          // TODO:
-        } finally {
-          readLock.unlock();
-        }
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
-    }
-    return route;
+    return stateFlowStack.toString();
   }
 
   /**
@@ -438,7 +429,7 @@ public final class StateMachineImpl implements StateMachine {
           nextState = stateFlowStack.pop();
           // }
         } catch (EmptyStackException stackIsEmpty) {
-          // stack is finally empty, nothing to return
+          logger.warn("stateFlowStack is empty, popState() has nothing to return");
         } finally {
           writeLock.unlock();
         }
