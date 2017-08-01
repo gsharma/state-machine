@@ -27,14 +27,14 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlow() throws StateMachineException {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
@@ -57,16 +57,16 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlowFailure() throws StateMachineException {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
+    transitionFunctors.add(BtoC);
     final TransitionCVsD CtoD = new TransitionCVsD();
-    transitions.add(CtoD);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(CtoD);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     machine.resetMachineOnTransitionFailure(true);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
@@ -94,14 +94,14 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlowFullRewind() throws StateMachineException {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
@@ -144,14 +144,14 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlowStepWiseRewind() throws StateMachineException {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
@@ -186,14 +186,14 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlowRewindReset() throws StateMachineException {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     // INIT->A
@@ -220,14 +220,14 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineThreadSafety() throws Exception {
-    final List<Transition> transitions = new ArrayList<>();
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
-    transitions.add(toA);
+    transitionFunctors.add(toA);
     final TransitionAVsB AtoB = new TransitionAVsB();
-    transitions.add(AtoB);
+    transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
-    transitions.add(BtoC);
-    final StateMachine machine = new StateMachineImpl(transitions);
+    transitionFunctors.add(BtoC);
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState());
 
     final AtomicInteger toACounterSuccess = new AtomicInteger();
@@ -310,7 +310,7 @@ public class StateMachineTest {
     }
   }
 
-  public static class TransitionNotStartedVsA extends Transition {
+  public static class TransitionNotStartedVsA extends TransitionFunctor {
     public TransitionNotStartedVsA() throws StateMachineException {
       super(StateMachineImpl.notStartedState, States.aState);
     }
@@ -328,7 +328,7 @@ public class StateMachineTest {
     }
   }
 
-  public static class TransitionAVsB extends Transition {
+  public static class TransitionAVsB extends TransitionFunctor {
     public TransitionAVsB() throws StateMachineException {
       super(States.aState, States.bState);
     }
@@ -346,7 +346,7 @@ public class StateMachineTest {
     }
   }
 
-  public static class TransitionBVsC extends Transition {
+  public static class TransitionBVsC extends TransitionFunctor {
     public TransitionBVsC() throws StateMachineException {
       super(States.bState, States.cState);
     }
@@ -364,7 +364,7 @@ public class StateMachineTest {
     }
   }
 
-  public static class TransitionCVsD extends Transition {
+  public static class TransitionCVsD extends TransitionFunctor {
     public TransitionCVsD() throws StateMachineException {
       super(States.cState, States.dState);
     }

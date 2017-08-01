@@ -9,10 +9,8 @@
   <url>http://maven.apache.org</url>
 
   <scm>
-    <connection>scm:git:git://github.com:gsharma/statemachine.git
-      </connection>
-    <developerConnection> scm:git:git@github.com:gsharma/statemachine.git
-      </developerConnection>
+    <connection>scm:git:git://github.com:gsharma/statemachine.git</connection>
+    <developerConnection> scm:git:git@github.com:gsharma/statemachine.git</developerConnection>
     <url>http://github.com/gsharma/statemachine</url>
   </scm>
 

@@ -2,13 +2,21 @@ package com.github.statemachine;
 
 import com.github.statemachine.StateMachineException.Code;
 
-public abstract class Transition {
+/**
+ * Extend the functor to provide a tuple of {fromState, toState} and the business logic that will
+ * allow the StateMachine to transition either forward ({@link #progress()} or backward
+ * {@link #regress()} between them.
+ * 
+ * @author gaurav
+ */
+public abstract class TransitionFunctor {
   private final String forwardId;
   private final String reverseId;
   private final State fromState;
   private final State toState;
 
-  public Transition(final State fromState, final State toState) throws StateMachineException {
+  public TransitionFunctor(final State fromState, final State toState)
+      throws StateMachineException {
     if (fromState == null || toState == null) {
       throw new StateMachineException(Code.INVALID_STATE);
     }

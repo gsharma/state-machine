@@ -64,7 +64,8 @@ public final class StateMachineImpl implements StateMachine {
   private final Stack<State> stateFlowStack = new Stack<>();
 
   // K=fromState.id:toState.id, V=Transition
-  private final ConcurrentMap<String, Transition> stateTransitionTable = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
+      new ConcurrentHashMap<>();
 
   private boolean resetMachineToInitOnFailure;
 
@@ -76,7 +77,8 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  public StateMachineImpl(final List<Transition> transitions) throws StateMachineException {
+  public StateMachineImpl(final List<TransitionFunctor> transitionFunctors)
+      throws StateMachineException {
     logger.info("Firing up state machine");
     if (alive()) {
       logger.info("Cannot fire up an already running state machine");
@@ -85,15 +87,15 @@ public final class StateMachineImpl implements StateMachine {
     try {
       if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          if (transitions == null || transitions.isEmpty()) {
+          if (transitionFunctors == null || transitionFunctors.isEmpty()) {
             throw new StateMachineException(Code.INVALID_TRANSITIONS);
           }
           // final List<Transition> unmodifiableTransitions = new ArrayList<>(transitions.size());
           // Collections.copy(unmodifiableTransitions, transitions);
-          for (final Transition transition : transitions) {
-            if (transition != null) {
-              stateTransitionTable.put(transition.getForwardId(), transition);
-              stateTransitionTable.put(transition.getReverseId(), transition);
+          for (final TransitionFunctor transitionFunctor : transitionFunctors) {
+            if (transitionFunctor != null) {
+              stateTransitionTable.put(transitionFunctor.getForwardId(), transitionFunctor);
+              stateTransitionTable.put(transitionFunctor.getReverseId(), transitionFunctor);
             }
           }
           logger.info("Successfully hydrated stateTransitionTable: " + stateTransitionTable);
@@ -175,7 +177,8 @@ public final class StateMachineImpl implements StateMachine {
           }
           currentState = popState();
           try {
-            boolean isForwardTransition = isForwardTransition(machineId, currentState, nextState);
+            final boolean isForwardTransition =
+                isForwardTransition(machineId, currentState, nextState);
             success = transitionTo(currentState, nextState, !isForwardTransition);
             if (success) {
               logger.info(String.format("Successfully transitioned from %s->%s",
@@ -303,23 +306,24 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public Transition findTranstion(final String transitionId) throws StateMachineException {
+  public TransitionFunctor findTranstionFunctor(final String transitionId)
+      throws StateMachineException {
     try {
       if (!readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to lookup transition instate machine");
+            "Timed out while trying to lookup transition functor in state machine");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
 
-    Transition transition = null;
+    TransitionFunctor transitionFunctor = null;
     try {
-      transition = stateTransitionTable.get(transitionId);
+      transitionFunctor = stateTransitionTable.get(transitionId);
     } finally {
       readLock.unlock();
     }
-    return transition;
+    return transitionFunctor;
   }
 
   @Override
@@ -366,12 +370,12 @@ public final class StateMachineImpl implements StateMachine {
         // TODO: log this
         return success;
       }
-      final Transition transition =
+      final TransitionFunctor transitionFunctor =
           stateTransitionTable.get(transitionId(fromState, toState, true));
-      if (transition != null) {
+      if (transitionFunctor != null) {
         final TransitionResult result =
-            transition.getFromState().equals(fromState) ? transition.progress()
-                : transition.regress();
+            transitionFunctor.getFromState().equals(fromState) ? transitionFunctor.progress()
+                : transitionFunctor.regress();
         if (result != null && result.isSuccessful()) {
           if (!rewinding) {
             pushNextState(fromState);
@@ -389,11 +393,13 @@ public final class StateMachineImpl implements StateMachine {
         }
       } else {
         if (!rewinding) {
-          logger.error(
-              String.format("Failed to lookup transition from %s to %s", fromState, toState));
+          logger.error(String.format(
+              "Failed to lookup transition functor for state transition from %s to %s", fromState,
+              toState));
         } else {
-          logger.error(
-              String.format("Failed to lookup transition from %s to %s", toState, fromState));
+          logger.error(String.format(
+              "Failed to lookup transition functor for state transition from %s to %s", toState,
+              fromState));
         }
       }
     } finally {
@@ -469,12 +475,12 @@ public final class StateMachineImpl implements StateMachine {
     boolean forward = false;
     final String transitionId = transitionId(stateOne, stateTwo, true);
     final StateMachine stateMachine = StateMachineRegistry.lookup(stateMachineId);
-    final Transition transition =
-        stateMachine != null ? stateMachine.findTranstion(transitionId) : null;
-    if (transition != null) {
-      forward = transition.getForwardId().equals(transitionId);
+    final TransitionFunctor transitionFunctor =
+        stateMachine != null ? stateMachine.findTranstionFunctor(transitionId) : null;
+    if (transitionFunctor != null) {
+      forward = transitionFunctor.getForwardId().equals(transitionId);
       if (!forward) {
-        if (!transition.getReverseId().equals(transitionId)) {
+        if (!transitionFunctor.getReverseId().equals(transitionId)) {
           throw new StateMachineException(Code.ILLEGAL_TRANSITION);
         }
       }

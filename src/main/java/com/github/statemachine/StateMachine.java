@@ -64,9 +64,9 @@ public interface StateMachine {
   State readCurrentState() throws StateMachineException;
 
   /**
-   * Lookup a transition by its id.
+   * Lookup a TransitionFunctor by its id.
    */
-  Transition findTranstion(final String transitionId) throws StateMachineException;
+  TransitionFunctor findTranstionFunctor(final String transitionId) throws StateMachineException;
 
   /**
    * Reports the id of this StateMachine instance. You can have as many instances as you like.

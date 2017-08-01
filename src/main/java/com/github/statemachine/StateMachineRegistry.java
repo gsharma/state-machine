@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentMap;
  * Global registry of all state machines that exist within a jvm process.
  */
 final class StateMachineRegistry {
+  // fugly and pathetic!! really gaurav, you couldn't do better??
   private static final ConcurrentMap<String, StateMachine> allStateMachines =
       new ConcurrentHashMap<>();
 
