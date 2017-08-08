@@ -37,13 +37,25 @@ package com.github.statemachine;
  */
 public interface StateMachine {
 
+  ///// Flow-specific API /////
+  /**
+   * Start a new flow and return a handle to it via its id. This handle is to be used by all
+   * subsequent flow-specific functions.
+   */
+  String startFlow() throws StateMachineException;
+
+  /**
+   * Stop a flow.
+   */
+  boolean stopFlow(final String flowId) throws StateMachineException;
+
   /**
    * Transition the state machine to the given nextState. This will be one of the states set up as
    * part of the stateTransitionTable during initialization of the machine.
    * 
    * Returns true iff the state transition was successful.
    */
-  boolean transitionTo(final State nextState) throws StateMachineException;
+  boolean transitionTo(final String flowId, final State nextState) throws StateMachineException;
 
   /**
    * Rewind the state machine to either undo the last step/transition or reset it all the way to the
@@ -51,22 +63,29 @@ public interface StateMachine {
    * 
    * Returns true iff the state transition was successful.
    */
-  boolean rewind(final RewindMode mode) throws StateMachineException;
+  boolean rewind(final String flowId, final RewindMode mode) throws StateMachineException;
+
+  /**
+   * Read/report the current state of the state machine.
+   */
+  State readCurrentState(final String flowId) throws StateMachineException;
+
+  /**
+   * Print the potential route of state transitions.
+   */
+  String printStateTransitionRoute(final String flowId) throws StateMachineException;
+
+
+  ///// Non-Flow specific overall State Machine Functions /////
+  /**
+   * Lookup a TransitionFunctor by its id.
+   */
+  TransitionFunctor findTranstionFunctor(final String transitionId) throws StateMachineException;
 
   /**
    * On failing a transition, reset the state machine to INIT state
    */
   void resetMachineOnTransitionFailure(boolean resetStateMachineOnFailure);
-
-  /**
-   * Read/report the current state of the state machine.
-   */
-  State readCurrentState() throws StateMachineException;
-
-  /**
-   * Lookup a TransitionFunctor by its id.
-   */
-  TransitionFunctor findTranstionFunctor(final String transitionId) throws StateMachineException;
 
   /**
    * Reports the id of this StateMachine instance. You can have as many instances as you like.
@@ -82,10 +101,5 @@ public interface StateMachine {
    * Shutdown the state machine and clear all state flows and intermediate data structures.
    */
   boolean demolish() throws StateMachineException;
-
-  /**
-   * Print the potential route of state transitions.
-   */
-  String printStateTransitionRoute() throws StateMachineException;
 
 }

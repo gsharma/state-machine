@@ -51,10 +51,6 @@ public final class StateMachineImpl implements StateMachine {
 
   private final String machineId = UUID.randomUUID().toString();
 
-  private final ReentrantReadWriteLock superLock = new ReentrantReadWriteLock(true);
-  private final ReadLock readLock = superLock.readLock();
-  private final WriteLock writeLock = superLock.writeLock();
-
   // dumb hardcoded value in code, oh well
   private final static long lockAcquisitionMillis = 100L;
 
@@ -65,12 +61,12 @@ public final class StateMachineImpl implements StateMachine {
   private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
       new ConcurrentHashMap<>();
 
-  // allow safer state rewinding. Note that apart from the stateFlowStack, there is no modifiable
-  // transient state held by the state machine. The stateTransitionTable is either completely filled
-  // or completely drained but rarely ever modified other than these 2 terminal states.
-  private final Stack<State> stateFlowStack = new Stack<>();
+  private final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
 
-  private boolean resetMachineToInitOnFailure;
+  private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
+  private final WriteLock machineWriteLock = machineSuperLock.writeLock();
+
+  private volatile boolean resetMachineToInitOnFailure;
 
   public static State notStartedState;
   static {
@@ -82,13 +78,13 @@ public final class StateMachineImpl implements StateMachine {
 
   public StateMachineImpl(final List<TransitionFunctor> transitionFunctors)
       throws StateMachineException {
-    logger.info("Firing up state machine");
+    logInfo(machineId, null, "Firing up state machine");
     if (alive()) {
-      logger.info("Cannot fire up an already running state machine");
+      logInfo(machineId, null, "Cannot fire up an already running state machine");
       return;
     }
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           if (transitionFunctors == null || transitionFunctors.isEmpty()) {
             throw new StateMachineException(Code.INVALID_TRANSITIONS);
@@ -101,15 +97,15 @@ public final class StateMachineImpl implements StateMachine {
               stateTransitionTable.put(transitionFunctor.getReverseId(), transitionFunctor);
             }
           }
-          logger.info("Successfully hydrated stateTransitionTable: " + stateTransitionTable);
-          pushNextState(notStartedState);
+          logInfo(machineId, null,
+              "Successfully hydrated stateTransitionTable: " + stateTransitionTable);
 
           machineAlive.set(true);
-          logger.info("Successfully fired up state machine, id:" + machineId);
+          logInfo(machineId, null, "Successfully fired up state machine, id:" + machineId);
 
           StateMachineRegistry.register(this);
         } finally {
-          writeLock.unlock();
+          machineWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -118,6 +114,56 @@ public final class StateMachineImpl implements StateMachine {
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
+  }
+
+  @Override
+  public String startFlow() throws StateMachineException {
+    String flowId = null;
+    machineAlive();
+    try {
+      if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          // TODO: need to put upper-bounds on max live concurrent flows per machine
+          final Flow flow = new Flow();
+          flowId = flow.flowId;
+          allFlowsTable.put(flowId, flow);
+          pushNextState(flowId, notStartedState);
+        } finally {
+          machineWriteLock.unlock();
+        }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to shutdown state machine");
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    return flowId;
+  }
+
+  @Override
+  public boolean stopFlow(final String flowId) throws StateMachineException {
+    boolean success = false;
+    machineAlive();
+    try {
+      if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          Flow flow = lookupFlow(flowId);
+          flow.stateFlowStack.clear();
+          allFlowsTable.remove(flow.flowId);
+          flow = null;
+          success = true;
+        } finally {
+          machineWriteLock.unlock();
+        }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to shutdown state machine");
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    return success;
   }
 
   @Override
@@ -133,22 +179,23 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public boolean demolish() throws StateMachineException {
     boolean success = false;
-    logger.info("Demolishing state machine, id:" + machineId);
+    logInfo(machineId, null, "Demolishing state machine, id:" + machineId);
     machineAlive();
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         machineAlive.set(false);
         try {
-          stateFlowStack.clear();
-          pushNextState(notStartedState);
+          for (Flow flow : allFlowsTable.values()) {
+            stopFlow(flow.flowId);
+          }
           stateTransitionTable.clear();
           StateMachineRegistry.unregister(machineId);
-          logger.info("Drained stateTransitionTable, reset stateFlowStack to "
+          logInfo(machineId, null, "Drained stateTransitionTable, reset stateFlowStack to "
               + notStartedState.getName() + " state, purged from globalStateMachineHolder");
-          logger.info("Successfully shut down state machine, id:" + machineId);
+          logInfo(machineId, null, "Successfully shut down state machine, id:" + machineId);
           success = true;
         } finally {
-          writeLock.unlock();
+          machineWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -161,30 +208,32 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public boolean transitionTo(final State nextState) throws StateMachineException {
+  public boolean transitionTo(final String flowId, final State nextState)
+      throws StateMachineException {
     boolean success = false;
     machineAlive();
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          State currentState = readCurrentState();
+          State currentState = readCurrentState(flowId);
           if (currentState == null || nextState == null) {
-            logger.error(String.format("Invalid transition between null states: %s->%s",
-                currentState, nextState));
+            logError(machineId, flowId, String
+                .format("Invalid transition between null states: %s->%s", currentState, nextState));
             return success;
           }
           if (currentState == null || nextState == null || currentState.equals(nextState)) {
-            logger.error(String.format("Invalid transition between same state: %s->%s",
-                currentState, nextState));
+            logError(machineId, flowId, String
+                .format("Invalid transition between same state: %s->%s", currentState, nextState));
             return success;
           }
-          currentState = popState();
+          currentState = popState(flowId);
           try {
             final boolean isForwardTransition =
                 isForwardTransition(machineId, currentState, nextState);
-            success = transitionTo(currentState, nextState, !isForwardTransition);
+            success = transitionTo(flowId, currentState, nextState, !isForwardTransition);
             if (success) {
-              logger.info(String.format("Successfully transitioned from %s->%s",
+              logInfo(machineId, flowId, String.format("Successfully transitioned from %s->%s",
                   currentState.getName(), nextState.getName()));
             }
           } finally {
@@ -192,14 +241,14 @@ public final class StateMachineImpl implements StateMachine {
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
               if (resetMachineToInitOnFailure) {
-                resetMachineToInitOnTransitionFailure();
+                resetMachineToInitOnTransitionFailure(flowId);
               } else {
-                pushNextState(currentState);
+                pushNextState(flowId, currentState);
               }
             }
           }
         } finally {
-          writeLock.unlock();
+          flow.flowWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -212,45 +261,46 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public boolean rewind(final RewindMode mode) throws StateMachineException {
+  public boolean rewind(final String flowId, final RewindMode mode) throws StateMachineException {
     boolean success = false;
     machineAlive();
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           State currentState;
           State previousState;
           switch (mode) {
             case ONE_STEP:
               // check if current state is the init not started state
-              currentState = readCurrentState();
+              currentState = readCurrentState(flowId);
               if (currentState == null || currentState.equals(notStartedState)) {
                 // TODO: log
                 return success;
               }
-              currentState = popState();
-              previousState = popState();
-              success = transitionTo(currentState, previousState, true);
+              currentState = popState(flowId);
+              previousState = popState(flowId);
+              success = transitionTo(flowId, currentState, previousState, true);
               if (!success && resetMachineToInitOnFailure) {
-                resetMachineToInitOnTransitionFailure();
+                resetMachineToInitOnTransitionFailure(flowId);
               }
               break;
             case ALL_THE_WAY_STEP_WISE:
               // check if current state is the init not started state
-              while ((currentState = readCurrentState()) != null
+              while ((currentState = readCurrentState(flowId)) != null
                   && !currentState.equals(notStartedState)) {
-                currentState = popState();
-                previousState = popState();
+                currentState = popState(flowId);
+                previousState = popState(flowId);
                 try {
-                  success = transitionTo(currentState, previousState, true);
+                  success = transitionTo(flowId, currentState, previousState, true);
                 } finally {
                   // in case of transition failure, remember to revert the stateFlowStack
                   if (!success) {
                     if (resetMachineToInitOnFailure) {
-                      resetMachineToInitOnTransitionFailure();
+                      resetMachineToInitOnTransitionFailure(flowId);
                     } else {
-                      pushNextState(previousState);
-                      pushNextState(currentState);
+                      pushNextState(flowId, previousState);
+                      pushNextState(flowId, currentState);
                     }
                     break;
                   }
@@ -258,21 +308,21 @@ public final class StateMachineImpl implements StateMachine {
               }
               break;
             case ALL_THE_WAY_HARD_RESET:
-              currentState = readCurrentState();
+              currentState = readCurrentState(flowId);
               if (currentState.equals(notStartedState)) {
                 // TODO: log
                 return success;
               }
-              resetMachineToInitOnTransitionFailure();
-              stateFlowStack.clear();
-              pushNextState(notStartedState);
+              resetMachineToInitOnTransitionFailure(flowId);
+              flow.stateFlowStack.clear();
+              pushNextState(flowId, notStartedState);
               success = true;
               break;
             default:
               throw new StateMachineException(Code.REWIND_FAILURE);
           }
         } finally {
-          writeLock.unlock();
+          flow.flowWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
@@ -290,16 +340,17 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public State readCurrentState() throws StateMachineException {
+  public State readCurrentState(final String flowId) throws StateMachineException {
     State currentState = null;
     try {
-      if (readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          currentState = stateFlowStack.peek();
+          currentState = flow.stateFlowStack.peek();
         } catch (EmptyStackException emptyStack) {
           // do nothing, returned currentState should be null
         } finally {
-          readLock.unlock();
+          flow.flowReadLock.unlock();
         }
       }
     } catch (InterruptedException exception) {
@@ -311,27 +362,13 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public TransitionFunctor findTranstionFunctor(final String transitionId)
       throws StateMachineException {
-    try {
-      if (!readLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to lookup transition functor in state machine");
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
-    }
-
-    TransitionFunctor transitionFunctor = null;
-    try {
-      transitionFunctor = stateTransitionTable.get(transitionId);
-    } finally {
-      readLock.unlock();
-    }
-    return transitionFunctor;
+    return stateTransitionTable.get(transitionId);
   }
 
   @Override
-  public String printStateTransitionRoute() throws StateMachineException {
-    return stateFlowStack.toString();
+  public String printStateTransitionRoute(final String flowId) throws StateMachineException {
+    final Flow flow = lookupFlow(flowId);
+    return flow.stateFlowStack.toString();
   }
 
   /**
@@ -343,12 +380,14 @@ public final class StateMachineImpl implements StateMachine {
    * function.<br/>
    * 2. in case of a return value of false, push the fromState back on the stateFlowStack
    */
-  private boolean transitionTo(final State fromState, final State toState, boolean rewinding)
-      throws StateMachineException {
+  private boolean transitionTo(final String flowId, final State fromState, final State toState,
+      boolean rewinding) throws StateMachineException {
     boolean success = false;
+    Flow flow = null;
     try {
       machineAlive();
-      if (!writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      flow = lookupFlow(flowId);
+      if (!flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to transition state machine");
       }
@@ -369,32 +408,34 @@ public final class StateMachineImpl implements StateMachine {
                 : transitionFunctor.regress();
         if (result != null && result.isSuccessful()) {
           if (!rewinding) {
-            pushNextState(fromState);
+            pushNextState(flowId, fromState);
           }
-          pushNextState(toState);
+          pushNextState(flowId, toState);
           success = true;
         } else {
           if (!rewinding) {
-            logger.error(String.format("Failed to transition to transition from %s to %s, %s",
+            logError(machineId, flowId, String.format("Failed to transition from %s to %s, %s",
                 fromState, toState, result));
           } else {
-            logger.error(String.format("Failed to transition to transition from %s to %s, %s",
+            logError(machineId, flowId, String.format("Failed to transition from %s to %s, %s",
                 toState, fromState, result));
           }
         }
       } else {
         if (!rewinding) {
-          logger.error(String.format(
-              "Failed to lookup transition functor for state transition from %s to %s", fromState,
-              toState));
+          logError(machineId, flowId,
+              String.format(
+                  "Failed to lookup transition functor for state transition from %s to %s",
+                  fromState, toState));
         } else {
-          logger.error(String.format(
-              "Failed to lookup transition functor for state transition from %s to %s", toState,
-              fromState));
+          logError(machineId, flowId,
+              String.format(
+                  "Failed to lookup transition functor for state transition from %s to %s", toState,
+                  fromState));
         }
       }
     } finally {
-      writeLock.unlock();
+      flow.flowWriteLock.unlock();
     }
     return success;
   }
@@ -403,15 +444,17 @@ public final class StateMachineImpl implements StateMachine {
     return forward ? fromState.getId() + toState.getId() : toState.getId() + fromState.getId();
   }
 
-  private void resetMachineToInitOnTransitionFailure() throws StateMachineException {
+  private void resetMachineToInitOnTransitionFailure(final String flowId)
+      throws StateMachineException {
     machineAlive();
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          stateFlowStack.clear();
-          pushNextState(notStartedState);
+          flow.stateFlowStack.clear();
+          pushNextState(flowId, notStartedState);
         } finally {
-          writeLock.unlock();
+          flow.flowWriteLock.unlock();
         }
       }
     } catch (InterruptedException exception) {
@@ -419,19 +462,21 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  private State popState() throws StateMachineException {
+  private State popState(final String flowId) throws StateMachineException {
     State nextState = null;
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          nextState = stateFlowStack.peek();
+          nextState = flow.stateFlowStack.peek();
           // if (!nextState.equals(notStartedState)) {
-          nextState = stateFlowStack.pop();
+          nextState = flow.stateFlowStack.pop();
           // }
         } catch (EmptyStackException stackIsEmpty) {
-          logger.warn("stateFlowStack is empty, popState() has nothing to return");
+          logWarning(machineId, flowId,
+              "stateFlowStack is empty, popState() has nothing to return");
         } finally {
-          writeLock.unlock();
+          flow.flowWriteLock.unlock();
         }
       }
     } catch (InterruptedException exception) {
@@ -440,13 +485,15 @@ public final class StateMachineImpl implements StateMachine {
     return nextState;
   }
 
-  private void pushNextState(final State nextState) throws StateMachineException {
+  private void pushNextState(final String flowId, final State nextState)
+      throws StateMachineException {
     try {
-      if (writeLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+      final Flow flow = lookupFlow(flowId);
+      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          stateFlowStack.push(nextState);
+          flow.stateFlowStack.push(nextState);
         } finally {
-          writeLock.unlock();
+          flow.flowWriteLock.unlock();
         }
       }
     } catch (InterruptedException exception) {
@@ -477,6 +524,65 @@ public final class StateMachineImpl implements StateMachine {
       }
     }
     return forward;
+  }
+
+  private Flow lookupFlow(final String flowId) throws StateMachineException {
+    final Flow flow = allFlowsTable.get(flowId);
+    if (flow == null) {
+      throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
+    }
+    return flow;
+  }
+
+  private static void logError(final String machineId, final String flowId, final String message) {
+    logger.error(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
+        .append("] ").append(message).toString());
+  }
+
+  private static void logWarning(final String machineId, final String flowId,
+      final String message) {
+    logger.warn(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
+        .append("] ").append(message).toString());
+  }
+
+  private static void logInfo(final String machineId, final String flowId, final String message) {
+    logger.info(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
+        .append("] ").append(message).toString());
+  }
+
+  private static void logDebug(final String machineId, final String flowId, final String message) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
+          .append("] ").append(message).toString());
+    }
+  }
+
+  /**
+   * In order to support multiple user threads concurrently working on the same state machine, the
+   * idea is to split the actual state management into its own container that can then be handed to
+   * every thread or looked up by a dedicated id even if it's used by more than a thread within the
+   * context of the same "global/meta customer transaction".
+   * 
+   * The parent state machine itself will be configured and torn down just once but flows will get
+   * initiated and torn down within the scope of every customer "transaction". Note that this split
+   * means more fine-grained locking for operations that modify the per-flow state vs ones that
+   * impact the overall lifecycle of the parent state machine.
+   * 
+   * An associated challenge with this approach is to keep flows from leaking memory. One way to
+   * ensure this doesn't become a problem is by putting a sensible upper bound on the total set of
+   * live flows at any given point during the lifetime of a process.
+   */
+  private final static class Flow {
+    private final String flowId = UUID.randomUUID().toString();
+
+    private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
+    private final ReadLock flowReadLock = superFlowLock.readLock();
+    private final WriteLock flowWriteLock = superFlowLock.writeLock();
+
+    // allow safer state rewinding. Note that apart from the stateFlowStack, there is no modifiable
+    // transient state held by the state machine. The stateTransitionTable is either completely
+    // filled or completely drained but rarely ever modified other than these 2 terminal states.
+    private final Stack<State> stateFlowStack = new Stack<>();
   }
 
 }
