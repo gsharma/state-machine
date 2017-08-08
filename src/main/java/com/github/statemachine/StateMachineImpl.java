@@ -1,5 +1,6 @@
 package com.github.statemachine;
 
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Optional;
@@ -61,10 +62,12 @@ public final class StateMachineImpl implements StateMachine {
   private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
       new ConcurrentHashMap<>();
 
+  // K=flow.flowId, V=flow. We may be able to do with the non-chm implementation.
   private final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
 
   private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
   private final WriteLock machineWriteLock = machineSuperLock.writeLock();
+  private final ReadLock machineReadLock = machineSuperLock.readLock();
 
   private volatile boolean resetMachineToInitOnFailure;
 
@@ -99,6 +102,14 @@ public final class StateMachineImpl implements StateMachine {
           }
           logInfo(machineId, null,
               "Successfully hydrated stateTransitionTable: " + stateTransitionTable);
+
+          // TODO: this might potentially leave a dangling flow resulting in a leak
+          Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread thread, Throwable error) {
+              logError(machineId, null, "Logging unhandled exception", error);
+            }
+          });
 
           machineAlive.set(true);
           logInfo(machineId, null, "Successfully fired up state machine, id:" + machineId);
@@ -352,6 +363,8 @@ public final class StateMachineImpl implements StateMachine {
         } finally {
           flow.flowReadLock.unlock();
         }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -367,8 +380,22 @@ public final class StateMachineImpl implements StateMachine {
 
   @Override
   public String printStateTransitionRoute(final String flowId) throws StateMachineException {
+    String route = null;
     final Flow flow = lookupFlow(flowId);
-    return flow.stateFlowStack.toString();
+    try {
+      if (flow.flowReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          route = flow.stateFlowStack.toString();
+        } finally {
+          flow.flowReadLock.unlock();
+        }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    return route;
   }
 
   /**
@@ -456,6 +483,8 @@ public final class StateMachineImpl implements StateMachine {
         } finally {
           flow.flowWriteLock.unlock();
         }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -478,6 +507,8 @@ public final class StateMachineImpl implements StateMachine {
         } finally {
           flow.flowWriteLock.unlock();
         }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -495,6 +526,8 @@ public final class StateMachineImpl implements StateMachine {
         } finally {
           flow.flowWriteLock.unlock();
         }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -527,9 +560,22 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   private Flow lookupFlow(final String flowId) throws StateMachineException {
-    final Flow flow = allFlowsTable.get(flowId);
-    if (flow == null) {
-      throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
+    Flow flow = null;
+    try {
+      if (machineReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        try {
+          flow = allFlowsTable.get(flowId);
+          if (flow == null) {
+            throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
+          }
+        } finally {
+          machineReadLock.unlock();
+        }
+      } else {
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+      }
+    } catch (InterruptedException exception) {
+      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
     return flow;
   }
@@ -537,6 +583,12 @@ public final class StateMachineImpl implements StateMachine {
   private static void logError(final String machineId, final String flowId, final String message) {
     logger.error(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
         .append("] ").append(message).toString());
+  }
+
+  private static void logError(final String machineId, final String flowId, final String message,
+      final Throwable error) {
+    logger.error(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
+        .append("] ").append(message).toString(), error);
   }
 
   private static void logWarning(final String machineId, final String flowId,
