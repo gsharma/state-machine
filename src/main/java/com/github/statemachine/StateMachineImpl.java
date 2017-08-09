@@ -707,6 +707,7 @@ public final class StateMachineImpl implements StateMachine {
       this.sleepMillis = sleepMillis;
     }
 
+    // TODO: format out silly log stmts
     @Override
     public void run() {
       while (!isInterrupted()) {
@@ -715,20 +716,25 @@ public final class StateMachineImpl implements StateMachine {
               .append("][f:null] Flow purger woke up to scan dangling expired flows").toString());
         }
         final Iterator<Map.Entry<String, Flow>> flowIterator = allFlowsTable.entrySet().iterator();
+        int scanned = 0, purged = 0;
         while (flowIterator.hasNext()) {
           Flow flow = flowIterator.next().getValue();
           if (flow != null) {
+            scanned++;
             if (System.currentTimeMillis() > (flow.lastTouchTimeMillis + flowExpirationMillis)) {
               flow.stateFlowStack.clear();
               flowIterator.remove();
               logger.info(new StringBuilder().append("[m:").append(machineId).append("][f:")
-                  .append(flow.flowId).append("] Successfully purged flow, stats:: aliveSeconds:")
-                  .append(flow.aliveTime()).append(", successes:").append(flow.successes)
-                  .append(", failure:").append(flow.failures).toString());
+                  .append(flow.flowId).append("] Successfully purged flow with aliveSeconds:")
+                  .append(flow.aliveTime()).toString());
               flow = null;
+              purged++;
             }
           }
         }
+        logger.info(new StringBuilder().append("[m:").append(machineId)
+            .append("][f:null] Flow purger run stats:: scanned:").append(scanned)
+            .append(", purged:").append(purged).toString());
         try {
           Thread.sleep(sleepMillis);
         } catch (InterruptedException exception) {
