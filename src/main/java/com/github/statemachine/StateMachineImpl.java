@@ -2,7 +2,9 @@ package com.github.statemachine;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.EmptyStackException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.UUID;
@@ -51,9 +53,11 @@ public final class StateMachineImpl implements StateMachine {
   private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
 
   private final String machineId = UUID.randomUUID().toString();
+  private final long startTstampMillis = System.currentTimeMillis();
 
-  // dumb hardcoded value in code, oh well
+  // dumb hardcoded values in code, oh well
   private final static long lockAcquisitionMillis = 100L;
+  private final static long flowPurgerSleepMillis = 180 * 1000L;
 
   private final AtomicBoolean machineAlive = new AtomicBoolean();
 
@@ -65,11 +69,15 @@ public final class StateMachineImpl implements StateMachine {
   // K=flow.flowId, V=flow. We may be able to do with the non-chm implementation.
   private final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
 
+  private FlowPurger flowPurgerDaemon;
+
+  // global state machine level locks
   private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
   private final WriteLock machineWriteLock = machineSuperLock.writeLock();
   private final ReadLock machineReadLock = machineSuperLock.readLock();
 
-  private volatile boolean resetMachineToInitOnFailure;
+  private volatile boolean resetMachineToInitOnFailure = false;
+  private volatile long flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
 
   public static State notStartedState;
   static {
@@ -103,13 +111,18 @@ public final class StateMachineImpl implements StateMachine {
           logInfo(machineId, null,
               "Successfully hydrated stateTransitionTable: " + stateTransitionTable);
 
-          // TODO: this might potentially leave a dangling flow resulting in a leak
+          // TODO: when this occurs, it might potentially leave a dangling flow resulting in a leak
           Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, Throwable error) {
-              logError(machineId, null, "Logging unhandled exception", error);
+              logError(machineId, null,
+                  "Logging unhandled exception. Do check if a dangling Flow was left behind resulting in a potential memory leak",
+                  error);
             }
           });
+
+          flowPurgerDaemon = new FlowPurger(flowPurgerSleepMillis);
+          flowPurgerDaemon.start();
 
           machineAlive.set(true);
           logInfo(machineId, null, "Successfully fired up state machine, id:" + machineId);
@@ -136,6 +149,7 @@ public final class StateMachineImpl implements StateMachine {
         try {
           // TODO: need to put upper-bounds on max live concurrent flows per machine
           final Flow flow = new Flow();
+          flow.touch();
           flowId = flow.flowId;
           allFlowsTable.put(flowId, flow);
           pushNextState(flowId, notStartedState);
@@ -161,6 +175,7 @@ public final class StateMachineImpl implements StateMachine {
         try {
           Flow flow = lookupFlow(flowId);
           flow.stateFlowStack.clear();
+          flow.stopped = true;
           allFlowsTable.remove(flow.flowId);
           flow = null;
           success = true;
@@ -183,6 +198,11 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
+  public void setFlowExpirationMillis(long flowExpirationMillis) {
+    this.flowExpirationMillis = flowExpirationMillis;
+  }
+
+  @Override
   public void resetMachineOnTransitionFailure(final boolean resetMachineOnTransitionFailure) {
     this.resetMachineToInitOnFailure = resetMachineOnTransitionFailure;
   }
@@ -196,6 +216,8 @@ public final class StateMachineImpl implements StateMachine {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         machineAlive.set(false);
         try {
+          flowPurgerDaemon.interrupt();
+
           for (Flow flow : allFlowsTable.values()) {
             stopFlow(flow.flowId);
           }
@@ -251,11 +273,14 @@ public final class StateMachineImpl implements StateMachine {
             // in case of transition failure, remember to revert the stateFlowStack
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
+              flow.failures++;
               if (resetMachineToInitOnFailure) {
                 resetMachineToInitOnTransitionFailure(flowId);
               } else {
                 pushNextState(flowId, currentState);
               }
+            } else {
+              flow.successes++;
             }
           }
         } finally {
@@ -275,8 +300,9 @@ public final class StateMachineImpl implements StateMachine {
   public boolean rewind(final String flowId, final RewindMode mode) throws StateMachineException {
     boolean success = false;
     machineAlive();
+    Flow flow = null;
     try {
-      final Flow flow = lookupFlow(flowId);
+      flow = lookupFlow(flowId);
       if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           State currentState;
@@ -341,6 +367,11 @@ public final class StateMachineImpl implements StateMachine {
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    }
+    if (success) {
+      flow.successes++;
+    } else {
+      flow.failures++;
     }
     return success;
   }
@@ -559,6 +590,10 @@ public final class StateMachineImpl implements StateMachine {
     return forward;
   }
 
+  /**
+   * This will also invoke {@link Flow#touch()} which will end up updating the tstamp more
+   * frequently than we would like.
+   */
   private Flow lookupFlow(final String flowId) throws StateMachineException {
     Flow flow = null;
     try {
@@ -568,6 +603,8 @@ public final class StateMachineImpl implements StateMachine {
           if (flow == null) {
             throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
           }
+          // TODO: optimize placement of touch() to be invoked more sparingly.
+          flow.touch();
         } finally {
           machineReadLock.unlock();
         }
@@ -626,6 +663,7 @@ public final class StateMachineImpl implements StateMachine {
    */
   private final static class Flow {
     private final String flowId = UUID.randomUUID().toString();
+    private final long startMillis = System.currentTimeMillis();
 
     private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
     private final ReadLock flowReadLock = superFlowLock.readLock();
@@ -635,6 +673,68 @@ public final class StateMachineImpl implements StateMachine {
     // transient state held by the state machine. The stateTransitionTable is either completely
     // filled or completely drained but rarely ever modified other than these 2 terminal states.
     private final Stack<State> stateFlowStack = new Stack<>();
+
+    // used to track activity level of a flow
+    private volatile long lastTouchTimeMillis;
+    private volatile boolean stopped;
+
+    // basic flow statistics
+    private int successes;
+    private int failures;
+
+    private long aliveTime() {
+      return TimeUnit.SECONDS.convert(System.currentTimeMillis() - startMillis,
+          TimeUnit.MILLISECONDS);
+    }
+
+    private void touch() {
+      this.lastTouchTimeMillis = System.currentTimeMillis();
+    }
+  }
+
+  /**
+   * This daemon exists to purge flows that have not been stopped and are still lingering past their
+   * TTL.
+   */
+  private final class FlowPurger extends Thread {
+    private final Logger logger = LogManager.getLogger(FlowPurger.class.getSimpleName());
+    private final long sleepMillis;
+
+    private FlowPurger(final long sleepMillis) {
+      setDaemon(true);
+      this.sleepMillis = sleepMillis;
+    }
+
+    @Override
+    public void run() {
+      while (!isInterrupted()) {
+        if (logger.isDebugEnabled()) {
+          logger.debug(new StringBuilder().append("[m:").append(machineId)
+              .append("][f:null] Flow purger woke up to scan dangling expired flows").toString());
+        }
+        final Iterator<Map.Entry<String, Flow>> flowIterator = allFlowsTable.entrySet().iterator();
+        while (flowIterator.hasNext()) {
+          Flow flow = flowIterator.next().getValue();
+          if (flow != null && !flow.stopped) {
+            if (System.currentTimeMillis() > (flow.lastTouchTimeMillis + flowExpirationMillis)) {
+              flow.stateFlowStack.clear();
+              flow.stopped = true;
+              flowIterator.remove();
+              logger.info(new StringBuilder().append("[m:").append(machineId).append("][f:")
+                  .append(flow.flowId).append("] Successfully purged flow, stats:: aliveSeconds:")
+                  .append(flow.aliveTime()).append(", successes:").append(flow.successes)
+                  .append(", failure:").append(flow.failures).toString());
+              flow = null;
+            }
+          }
+        }
+        try {
+          Thread.sleep(sleepMillis);
+        } catch (InterruptedException exception) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
   }
 
 }
