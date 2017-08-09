@@ -703,6 +703,7 @@ public final class StateMachineImpl implements StateMachine {
     private final long sleepMillis;
 
     private FlowPurger(final long sleepMillis) {
+      setName("flow-purger-" + System.currentTimeMillis());
       setDaemon(true);
       this.sleepMillis = sleepMillis;
     }
