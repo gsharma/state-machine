@@ -739,6 +739,8 @@ public final class StateMachineImpl implements StateMachine {
         try {
           Thread.sleep(sleepMillis);
         } catch (InterruptedException exception) {
+          logger.info(new StringBuilder().append("[m:").append(machineId)
+              .append("][f:null] Shutting down flow purger").toString());
           Thread.currentThread().interrupt();
         }
       }

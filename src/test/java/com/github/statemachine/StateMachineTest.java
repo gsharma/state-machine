@@ -274,7 +274,8 @@ public class StateMachineTest {
             BtoCCounterFailure.incrementAndGet();
           }
           assertTrue(machine.stopFlow(flowId));
-        } catch (StateMachineException exception) {
+        } catch (StateMachineException problem) {
+          logger.error("machine:" + machine.getId() + " encountered an issue", problem);
         }
       }
     };
@@ -302,6 +303,74 @@ public class StateMachineTest {
     assertTrue(machine.alive());
     assertTrue(machine.demolish());
     assertFalse(machine.alive());
+  }
+
+  @Test
+  public void testMultipleStateMachines() throws Exception {
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitionFunctors.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitionFunctors.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitionFunctors.add(BtoC);
+
+    final Runnable stateMachineWorker = new Runnable() {
+      @Override
+      public void run() {
+        StateMachine machine = null;
+        try {
+          machine = new StateMachineImpl(transitionFunctors);
+          final String flowId = machine.startFlow();
+          assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
+
+          // INIT->A
+          assertTrue(machine.transitionTo(flowId, toA.getToState()));
+          assertEquals(toA.getToState(), machine.readCurrentState(flowId));
+
+          // A->B
+          assertTrue(machine.transitionTo(flowId, AtoB.getToState()));
+          assertEquals(AtoB.getToState(), machine.readCurrentState(flowId));
+
+          // B->C
+          assertTrue(machine.transitionTo(flowId, BtoC.getToState()));
+          assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
+
+          // C->B
+          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertEquals(BtoC.getFromState(), machine.readCurrentState(flowId));
+
+          // B->A
+          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertEquals(AtoB.getFromState(), machine.readCurrentState(flowId));
+
+          // A->INIT
+          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
+
+          assertTrue(machine.stopFlow(flowId));
+
+          assertTrue(machine.alive());
+          assertTrue(machine.demolish());
+          assertFalse(machine.alive());
+        } catch (StateMachineException problem) {
+          logger.error("machine:" + machine.getId() + " encountered an issue", problem);
+        }
+      }
+    };
+
+    int workerCount = 5;
+    final List<Thread> workers = new ArrayList<>(workerCount);
+    for (int iter = 0; iter < workerCount; iter++) {
+      final Thread worker = new Thread(stateMachineWorker, "machine-worker-" + iter);
+      workers.add(worker);
+    }
+    for (final Thread worker : workers) {
+      worker.start();
+    }
+    for (final Thread worker : workers) {
+      worker.join();
+    }
   }
 
   public static final class States {
