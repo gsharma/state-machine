@@ -175,7 +175,6 @@ public final class StateMachineImpl implements StateMachine {
         try {
           Flow flow = lookupFlow(flowId);
           flow.stateFlowStack.clear();
-          flow.stopped = true;
           allFlowsTable.remove(flow.flowId);
           flow = null;
           success = true;
@@ -217,6 +216,7 @@ public final class StateMachineImpl implements StateMachine {
         machineAlive.set(false);
         try {
           flowPurgerDaemon.interrupt();
+          flowPurgerDaemon = null;
 
           for (Flow flow : allFlowsTable.values()) {
             stopFlow(flow.flowId);
@@ -676,7 +676,6 @@ public final class StateMachineImpl implements StateMachine {
 
     // used to track activity level of a flow
     private volatile long lastTouchTimeMillis;
-    private volatile boolean stopped;
 
     // basic flow statistics
     private int successes;
@@ -695,6 +694,9 @@ public final class StateMachineImpl implements StateMachine {
   /**
    * This daemon exists to purge flows that have not been stopped and are still lingering past their
    * TTL.
+   * 
+   * Even though this is not a singleton in practice, it is intended to exist as one instance per
+   * its enclosing fsm. It is non-static by design.
    */
   private final class FlowPurger extends Thread {
     private final Logger logger = LogManager.getLogger(FlowPurger.class.getSimpleName());
@@ -715,10 +717,9 @@ public final class StateMachineImpl implements StateMachine {
         final Iterator<Map.Entry<String, Flow>> flowIterator = allFlowsTable.entrySet().iterator();
         while (flowIterator.hasNext()) {
           Flow flow = flowIterator.next().getValue();
-          if (flow != null && !flow.stopped) {
+          if (flow != null) {
             if (System.currentTimeMillis() > (flow.lastTouchTimeMillis + flowExpirationMillis)) {
               flow.stateFlowStack.clear();
-              flow.stopped = true;
               flowIterator.remove();
               logger.info(new StringBuilder().append("[m:").append(machineId).append("][f:")
                   .append(flow.flowId).append("] Successfully purged flow, stats:: aliveSeconds:")
