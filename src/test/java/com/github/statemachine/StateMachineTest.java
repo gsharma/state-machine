@@ -359,7 +359,7 @@ public class StateMachineTest {
       }
     };
 
-    int workerCount = 5;
+    int workerCount = 20;
     final List<Thread> workers = new ArrayList<>(workerCount);
     for (int iter = 0; iter < workerCount; iter++) {
       final Thread worker = new Thread(stateMachineWorker, "test-machine-worker-" + iter);

@@ -125,15 +125,15 @@ public final class StateMachineImpl implements StateMachine {
           flowPurgerDaemon.start();
 
           machineAlive.set(true);
-          logInfo(machineId, null, "Successfully fired up state machine, id:" + machineId);
+          logInfo(machineId, null, "Successfully fired up state machine");
 
-          StateMachineRegistry.register(this);
+          StateMachineRegistry.getInstance().register(this);
         } finally {
           machineWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to curate state machine, id:" + machineId);
+            "Timed out while trying to curate state machine");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -149,6 +149,7 @@ public final class StateMachineImpl implements StateMachine {
         try {
           // TODO: need to put upper-bounds on max live concurrent flows per machine
           final Flow flow = new Flow();
+          flow.machineId = machineId;
           flow.touch();
           flowId = flow.flowId;
           allFlowsTable.put(flowId, flow);
@@ -177,7 +178,6 @@ public final class StateMachineImpl implements StateMachine {
           Flow flow = lookupFlow(flowId);
           flow.stateFlowStack.clear();
           allFlowsTable.remove(flow.flowId);
-          flow = null;
           success = true;
           logInfo(machineId, flowId, "Stopped flow");
         } finally {
@@ -211,23 +211,33 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public boolean demolish() throws StateMachineException {
     boolean success = false;
-    logInfo(machineId, null, "Demolishing state machine, id:" + machineId);
-    machineAlive();
+    if (machineAlive != null && !machineAlive.get()) {
+      logInfo(machineId, null, "State machine is already demolished");
+      return true;
+    }
+    logInfo(machineId, null, "Demolishing state machine");
     try {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
+        // 1. signal death
         machineAlive.set(false);
         try {
+          // 2. interrupt flow purger
           flowPurgerDaemon.interrupt();
+          flowPurgerDaemon.join();
           flowPurgerDaemon = null;
 
+          // 3. stop all flows
           for (Flow flow : allFlowsTable.values()) {
             stopFlow(flow.flowId);
           }
+
+          // 4. clear state transition table
           stateTransitionTable.clear();
-          StateMachineRegistry.unregister(machineId);
-          logInfo(machineId, null, "Drained stateTransitionTable, reset stateFlowStack to "
-              + notStartedState.getName() + " state, purged from globalStateMachineHolder");
-          logInfo(machineId, null, "Successfully shut down state machine, id:" + machineId);
+
+          // 5. unregister self
+          StateMachineRegistry.getInstance().unregister(machineId);
+
+          logInfo(machineId, null, "Successfully shut down state machine");
           success = true;
         } finally {
           machineWriteLock.unlock();
@@ -583,7 +593,7 @@ public final class StateMachineImpl implements StateMachine {
       final State stateTwo) throws StateMachineException {
     boolean forward = false;
     final String transitionId = transitionId(stateOne, stateTwo, true);
-    final StateMachine stateMachine = StateMachineRegistry.lookup(stateMachineId);
+    final StateMachine stateMachine = StateMachineRegistry.getInstance().lookup(stateMachineId);
     final TransitionFunctor transitionFunctor =
         stateMachine != null ? stateMachine.findTranstionFunctor(transitionId) : null;
     if (transitionFunctor != null) {
@@ -653,6 +663,11 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
+  @Override
+  public void finalize() {
+    logInfo(machineId, null, "Garbage collected stopped state machine");
+  }
+
   /**
    * In order to support multiple user threads concurrently working on the same state machine, the
    * idea is to split the actual state management into its own container that can then be handed to
@@ -671,6 +686,8 @@ public final class StateMachineImpl implements StateMachine {
   private final static class Flow {
     private final String flowId = UUID.randomUUID().toString();
     private final long startMillis = System.currentTimeMillis();
+
+    private transient String machineId;
 
     private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
     private final ReadLock flowReadLock = superFlowLock.readLock();
@@ -696,6 +713,11 @@ public final class StateMachineImpl implements StateMachine {
     private void touch() {
       this.lastTouchTimeMillis = System.currentTimeMillis();
     }
+
+    @Override
+    public void finalize() {
+      logInfo(machineId, flowId, "Garbage collected stopped flow");
+    }
   }
 
   /**
@@ -709,7 +731,7 @@ public final class StateMachineImpl implements StateMachine {
     private final long sleepMillis;
 
     private FlowPurger(final long sleepMillis) {
-      setName("flow-purger");
+      setName("Flow-Purger");
       setDaemon(true);
       this.sleepMillis = sleepMillis;
     }
@@ -718,10 +740,7 @@ public final class StateMachineImpl implements StateMachine {
     @Override
     public void run() {
       while (!isInterrupted()) {
-        if (logger.isDebugEnabled()) {
-          logDebug(machineId, null, new StringBuilder().append("[m:").append(machineId)
-              .append("][f:null] Flow purger woke up to scan dangling expired flows").toString());
-        }
+        logDebug(machineId, null, "Flow purger woke up to scan dangling expired flows");
         final Iterator<Map.Entry<String, Flow>> flowIterator = allFlowsTable.entrySet().iterator();
         int scanned = 0, purged = 0;
         while (flowIterator.hasNext()) {
@@ -732,26 +751,21 @@ public final class StateMachineImpl implements StateMachine {
               flow.stateFlowStack.clear();
               flowIterator.remove();
               logInfo(machineId, flow.flowId,
-                  new StringBuilder().append("[m:").append(machineId).append("][f:")
-                      .append(flow.flowId).append("] Successfully purged flow with aliveSeconds:")
-                      .append(flow.aliveTime()).toString());
+                  "Successfully purged flow with aliveSeconds:" + flow.aliveTime());
               flow = null;
               purged++;
             }
           }
         }
-        logInfo(machineId, null,
-            new StringBuilder().append("[m:").append(machineId)
-                .append("][f:null] Flow purger run stats:: scanned:").append(scanned)
-                .append(", purged:").append(purged).toString());
+        logInfo(machineId, null, new StringBuilder().append("Flow purger run stats::scanned:")
+            .append(scanned).append(", purged:").append(purged).toString());
         try {
           Thread.sleep(sleepMillis);
         } catch (InterruptedException exception) {
-          logInfo(machineId, null, new StringBuilder().append("[m:").append(machineId)
-              .append("][f:null] Shutting down flow purger").toString());
           Thread.currentThread().interrupt();
         }
       }
+      logInfo(machineId, null, "Successfully shut down flow purger");
     }
   }
 
