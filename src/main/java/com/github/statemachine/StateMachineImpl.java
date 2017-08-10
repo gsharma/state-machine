@@ -736,7 +736,6 @@ public final class StateMachineImpl implements StateMachine {
       this.sleepMillis = sleepMillis;
     }
 
-    // TODO: format out silly log stmts
     @Override
     public void run() {
       while (!isInterrupted()) {
@@ -757,8 +756,8 @@ public final class StateMachineImpl implements StateMachine {
             }
           }
         }
-        logInfo(machineId, null, new StringBuilder().append("Flow purger run stats::scanned:")
-            .append(scanned).append(", purged:").append(purged).toString());
+        logInfo(machineId, null,
+            String.format("Flow purger run stats::scanned:%d, purged:%d", scanned, purged));
         try {
           Thread.sleep(sleepMillis);
         } catch (InterruptedException exception) {
@@ -770,6 +769,7 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   /**
+   * TODO<br>
    * Persist-able elements<br>
    * 1. StateMachine::machineId, resetMachineToInitOnFailure, flowExpirationMillis<br>
    * 2. StateMachine::ConcurrentMap<String, TransitionFunctor> stateTransitionTable<br>
