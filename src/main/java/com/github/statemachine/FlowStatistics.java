@@ -1,15 +1,13 @@
 package com.github.statemachine;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * Simple statistics holder for a flow.
  */
 public final class FlowStatistics {
   private final long startMillis = System.currentTimeMillis();
   String flowId;
-  int successes;
-  int failures;
+  int transitionSuccesses;
+  int transitionFailures;
   // used to track activity level of a flow
   long lastTouchTimeMillis;
 
@@ -17,24 +15,23 @@ public final class FlowStatistics {
     return flowId;
   }
 
-  public int getSuccesses() {
-    return successes;
+  public int getTransitionSuccesses() {
+    return transitionSuccesses;
   }
 
-  public int getFailures() {
-    return failures;
+  public int getTransitionFailures() {
+    return transitionFailures;
   }
 
-  public long getAliveTimeSeconds() {
-    return TimeUnit.SECONDS.convert(System.currentTimeMillis() - startMillis,
-        TimeUnit.MILLISECONDS);
+  public long getAliveTimeMillis() {
+    return System.currentTimeMillis() - startMillis;
   }
 
   @Override
   public String toString() {
-    return "FlowStatistics [flowId=" + flowId + ", startMillis=" + startMillis + ", successes="
-        + successes + ", failures=" + failures + ", lastTouchTimeMillis=" + lastTouchTimeMillis
-        + ", aliveTimeSeconds=" + getAliveTimeSeconds() + "]";
+    return "FlowStatistics [flowId=" + flowId + ", transitionSuccesses=" + transitionSuccesses
+        + ", transitionFailures=" + transitionFailures + ", lastTouchTimeMillis="
+        + lastTouchTimeMillis + ", aliveTimeMillis=" + getAliveTimeMillis() + "]";
   }
 
 }

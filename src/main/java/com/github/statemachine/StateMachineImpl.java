@@ -180,6 +180,7 @@ public final class StateMachineImpl implements StateMachine {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           Flow flow = lookupFlow(flowId);
+          logInfo(machineId, flowId, "Stopping flow with " + flow.flowStats);
           flow.stateFlowStack.clear();
           allFlowsTable.remove(flow.flowId);
           success = true;
@@ -297,14 +298,14 @@ public final class StateMachineImpl implements StateMachine {
             // in case of transition failure, remember to revert the stateFlowStack
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
-              flow.flowStats.failures++;
+              flow.flowStats.transitionFailures++;
               if (resetMachineToInitOnFailure) {
                 resetMachineToInitOnTransitionFailure(flowId);
               } else {
                 pushNextState(flowId, currentState);
               }
             } else {
-              flow.flowStats.successes++;
+              flow.flowStats.transitionSuccesses++;
             }
           }
         } finally {
@@ -393,9 +394,9 @@ public final class StateMachineImpl implements StateMachine {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
     if (success) {
-      flow.flowStats.successes++;
+      flow.flowStats.transitionSuccesses++;
     } else {
-      flow.flowStats.failures++;
+      flow.flowStats.transitionFailures++;
     }
     return success;
   }
@@ -758,8 +759,8 @@ public final class StateMachineImpl implements StateMachine {
                 + flowExpirationMillis)) {
               flow.stateFlowStack.clear();
               flowIterator.remove();
-              logInfo(machineId, flow.flowId, "Successfully purged flow with aliveSeconds:"
-                  + flow.flowStats.getAliveTimeSeconds());
+              logInfo(machineId, flow.flowId,
+                  String.format("Successfully purged flow with %s", flow.flowStats));
               flow = null;
               purged++;
             }

@@ -273,6 +273,7 @@ public class StateMachineTest {
           } else {
             BtoCCounterFailure.incrementAndGet();
           }
+          logger.info(machine.getStatistics().toString());
           assertTrue(machine.stopFlow(flowId));
         } catch (StateMachineException problem) {
           logger.error("machine:" + machine.getId() + " encountered an issue", problem);
@@ -359,7 +360,7 @@ public class StateMachineTest {
       }
     };
 
-    int workerCount = 20;
+    int workerCount = 5;
     final List<Thread> workers = new ArrayList<>(workerCount);
     for (int iter = 0; iter < workerCount; iter++) {
       final Thread worker = new Thread(stateMachineWorker, "test-machine-worker-" + iter);

@@ -18,7 +18,7 @@ public final class StateMachineStatistics {
   }
 
   private final long startTstampMillis = System.currentTimeMillis();
-  private List<FlowStatistics> latestActiveFlowStats;
+  private final List<FlowStatistics> latestActiveFlowStats = new ArrayList<>();
   int totalStartedFlows;
   int totalStoppedFlows;
   private long lastComputedMillis;
@@ -40,10 +40,11 @@ public final class StateMachineStatistics {
         || (lastComputedMillis + recomputeIntervalMillis < System.currentTimeMillis())) {
       final List<FlowStatistics> activeFlowStats = new ArrayList<>();
       final StateMachine stateMachine = StateMachineRegistry.getInstance().lookup(stateMachineId);
-      for (Flow flow : ((StateMachineImpl) stateMachine).allFlowsTable.values()) {
+      for (final Flow flow : ((StateMachineImpl) stateMachine).allFlowsTable.values()) {
         activeFlowStats.add(flow.flowStats);
       }
-      latestActiveFlowStats = activeFlowStats;
+      latestActiveFlowStats.clear();
+      latestActiveFlowStats.addAll(activeFlowStats);
       lastComputedMillis = System.currentTimeMillis();
     }
     return Collections.unmodifiableList(latestActiveFlowStats);
@@ -65,8 +66,8 @@ public final class StateMachineStatistics {
   public String toString() {
     return "StateMachineStatistics [stateMachineId=" + stateMachineId + ", startTstampMillis="
         + startTstampMillis + ", totalStartedFlows=" + totalStartedFlows + ", totalStoppedFlows="
-        + totalStoppedFlows + ", lastComputedMillis=" + lastComputedMillis
-        + ", latestActiveFlowStats=" + latestActiveFlowStats + "]";
+        + totalStoppedFlows + ", lastComputedMillis=" + lastComputedMillis + ", activeFlowStats="
+        + latestActiveFlowStats + "]";
   }
 
 }
