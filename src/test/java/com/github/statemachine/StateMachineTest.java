@@ -283,7 +283,7 @@ public class StateMachineTest {
     int workerCount = 5;
     final List<Thread> workers = new ArrayList<>(workerCount);
     for (int iter = 0; iter < workerCount; iter++) {
-      final Thread worker = new Thread(transitionWorker, "transition-worker-" + iter);
+      final Thread worker = new Thread(transitionWorker, "test-transition-worker-" + iter);
       workers.add(worker);
     }
     for (final Thread worker : workers) {
@@ -362,7 +362,7 @@ public class StateMachineTest {
     int workerCount = 5;
     final List<Thread> workers = new ArrayList<>(workerCount);
     for (int iter = 0; iter < workerCount; iter++) {
-      final Thread worker = new Thread(stateMachineWorker, "machine-worker-" + iter);
+      final Thread worker = new Thread(stateMachineWorker, "test-machine-worker-" + iter);
       workers.add(worker);
     }
     for (final Thread worker : workers) {

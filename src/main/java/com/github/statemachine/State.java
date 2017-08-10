@@ -1,6 +1,5 @@
 package com.github.statemachine;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,7 +15,7 @@ public final class State {
   // name and customMetadata are optional
   final static int maxStateNameLength = 20;
   private String name = "UNDEF"; // optional
-  private Optional<Map<Object, Object>> customMetadata = Optional.empty();
+  // private Optional<Map<Object, Object>> customMetadata = Optional.empty();
 
   /**
    * State name is optional
@@ -39,17 +38,14 @@ public final class State {
     return name;
   }
 
-  public void setCustomMetadata(final Map<Object, Object> customMetadata) {
-    if (customMetadata != null && !customMetadata.isEmpty()) {
-      for (Map.Entry<Object, Object> metadataEntry : customMetadata.entrySet()) {
-        this.customMetadata.get().put(metadataEntry.getKey(), metadataEntry.getValue());
-      }
-    }
-  }
-
-  public Optional<Map<Object, Object>> getCustomMetadata() {
-    return customMetadata;
-  }
+  /*
+   * public void setCustomMetadata(final Map<Object, Object> customMetadata) { if (customMetadata !=
+   * null && !customMetadata.isEmpty()) { for (Map.Entry<Object, Object> metadataEntry :
+   * customMetadata.entrySet()) { this.customMetadata.get().put(metadataEntry.getKey(),
+   * metadataEntry.getValue()); } } }
+   * 
+   * public Optional<Map<Object, Object>> getCustomMetadata() { return customMetadata; }
+   */
 
   @Override
   public int hashCode() {

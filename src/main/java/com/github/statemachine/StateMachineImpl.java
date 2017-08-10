@@ -62,7 +62,7 @@ public final class StateMachineImpl implements StateMachine {
   private final AtomicBoolean machineAlive = new AtomicBoolean();
 
   // K=fromState.id:toState.id, V=TransitionFunctor. This table is either fully hydrated or fully
-  // dehydrated. It is never modified any differently.
+  // dehydrated. It is never modified any differently other than during {start, stop} phases.
   private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
       new ConcurrentHashMap<>();
 
@@ -706,7 +706,6 @@ public final class StateMachineImpl implements StateMachine {
    * its enclosing fsm. It is non-static by design.
    */
   private final class FlowPurger extends Thread {
-    private final Logger logger = LogManager.getLogger(FlowPurger.class.getSimpleName());
     private final long sleepMillis;
 
     private FlowPurger(final long sleepMillis) {
@@ -720,7 +719,7 @@ public final class StateMachineImpl implements StateMachine {
     public void run() {
       while (!isInterrupted()) {
         if (logger.isDebugEnabled()) {
-          logger.debug(new StringBuilder().append("[m:").append(machineId)
+          logDebug(machineId, null, new StringBuilder().append("[m:").append(machineId)
               .append("][f:null] Flow purger woke up to scan dangling expired flows").toString());
         }
         final Iterator<Map.Entry<String, Flow>> flowIterator = allFlowsTable.entrySet().iterator();
@@ -732,21 +731,23 @@ public final class StateMachineImpl implements StateMachine {
             if (System.currentTimeMillis() > (flow.lastTouchTimeMillis + flowExpirationMillis)) {
               flow.stateFlowStack.clear();
               flowIterator.remove();
-              logger.info(new StringBuilder().append("[m:").append(machineId).append("][f:")
-                  .append(flow.flowId).append("] Successfully purged flow with aliveSeconds:")
-                  .append(flow.aliveTime()).toString());
+              logInfo(machineId, flow.flowId,
+                  new StringBuilder().append("[m:").append(machineId).append("][f:")
+                      .append(flow.flowId).append("] Successfully purged flow with aliveSeconds:")
+                      .append(flow.aliveTime()).toString());
               flow = null;
               purged++;
             }
           }
         }
-        logger.info(new StringBuilder().append("[m:").append(machineId)
-            .append("][f:null] Flow purger run stats:: scanned:").append(scanned)
-            .append(", purged:").append(purged).toString());
+        logInfo(machineId, null,
+            new StringBuilder().append("[m:").append(machineId)
+                .append("][f:null] Flow purger run stats:: scanned:").append(scanned)
+                .append(", purged:").append(purged).toString());
         try {
           Thread.sleep(sleepMillis);
         } catch (InterruptedException exception) {
-          logger.info(new StringBuilder().append("[m:").append(machineId)
+          logInfo(machineId, null, new StringBuilder().append("[m:").append(machineId)
               .append("][f:null] Shutting down flow purger").toString());
           Thread.currentThread().interrupt();
         }
@@ -754,5 +755,14 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
+  /**
+   * Persist-able elements<br>
+   * 1. StateMachine::machineId, resetMachineToInitOnFailure, flowExpirationMillis<br>
+   * 2. StateMachine::ConcurrentMap<String, TransitionFunctor> stateTransitionTable<br>
+   * 3. StateMachine::ConcurrentMap<String, Flow> allFlowsTable<br>
+   * 4. Flow::flowId, lastTouchTime, startMillis, successes, failures<br>
+   * 5. Flow::Stack<State> stateFlowStack<br>
+   * 6. State::stateId, name<br>
+   */
 }
 
