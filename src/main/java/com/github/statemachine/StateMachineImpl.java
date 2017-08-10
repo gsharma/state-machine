@@ -153,12 +153,13 @@ public final class StateMachineImpl implements StateMachine {
           flowId = flow.flowId;
           allFlowsTable.put(flowId, flow);
           pushNextState(flowId, notStartedState);
+          logInfo(machineId, flowId, "Started flow");
         } finally {
           machineWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to shutdown state machine");
+            "Timed out while trying to start flow");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -178,12 +179,13 @@ public final class StateMachineImpl implements StateMachine {
           allFlowsTable.remove(flow.flowId);
           flow = null;
           success = true;
+          logInfo(machineId, flowId, "Stopped flow");
         } finally {
           machineWriteLock.unlock();
         }
       } else {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to shutdown state machine");
+            "Timed out while trying to shutdown flow");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -395,7 +397,8 @@ public final class StateMachineImpl implements StateMachine {
           flow.flowReadLock.unlock();
         }
       } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to read current state");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -421,7 +424,8 @@ public final class StateMachineImpl implements StateMachine {
           flow.flowReadLock.unlock();
         }
       } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to print state transition route");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -515,7 +519,8 @@ public final class StateMachineImpl implements StateMachine {
           flow.flowWriteLock.unlock();
         }
       } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to reset state machine");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -539,7 +544,8 @@ public final class StateMachineImpl implements StateMachine {
           flow.flowWriteLock.unlock();
         }
       } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to pop state");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -558,7 +564,8 @@ public final class StateMachineImpl implements StateMachine {
           flow.flowWriteLock.unlock();
         }
       } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
+        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
+            "Timed out while trying to push next state");
       }
     } catch (InterruptedException exception) {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
@@ -703,7 +710,7 @@ public final class StateMachineImpl implements StateMachine {
     private final long sleepMillis;
 
     private FlowPurger(final long sleepMillis) {
-      setName("flow-purger-" + System.currentTimeMillis());
+      setName("flow-purger");
       setDaemon(true);
       this.sleepMillis = sleepMillis;
     }
