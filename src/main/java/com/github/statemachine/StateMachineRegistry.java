@@ -48,6 +48,7 @@ final class StateMachineRegistry {
         for (final StateMachine stateMachine : allStateMachines.values()) {
           try {
             if (stateMachine.alive()) {
+              logger.info(stateMachine.getStatistics());
               stateMachine.demolish();
             }
           } catch (StateMachineException problem) {

@@ -53,7 +53,6 @@ public final class StateMachineImpl implements StateMachine {
   private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
 
   private final String machineId = UUID.randomUUID().toString();
-  private final long startTstampMillis = System.currentTimeMillis();
 
   // dumb hardcoded values in code, oh well
   private final static long lockAcquisitionMillis = 100L;
@@ -67,9 +66,11 @@ public final class StateMachineImpl implements StateMachine {
       new ConcurrentHashMap<>();
 
   // K=flow.flowId, V=flow. We may be able to do with the non-chm implementation.
-  private final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
+  final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
 
   private FlowPurger flowPurgerDaemon;
+
+  private StateMachineStatistics machineStats;
 
   // global state machine level locks
   private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
@@ -124,6 +125,8 @@ public final class StateMachineImpl implements StateMachine {
           flowPurgerDaemon = new FlowPurger(flowPurgerSleepMillis);
           flowPurgerDaemon.start();
 
+          machineStats = new StateMachineStatistics(machineId);
+
           machineAlive.set(true);
           logInfo(machineId, null, "Successfully fired up state machine");
 
@@ -154,6 +157,7 @@ public final class StateMachineImpl implements StateMachine {
           flowId = flow.flowId;
           allFlowsTable.put(flowId, flow);
           pushNextState(flowId, notStartedState);
+          machineStats.totalStartedFlows++;
           logInfo(machineId, flowId, "Started flow");
         } finally {
           machineWriteLock.unlock();
@@ -179,6 +183,7 @@ public final class StateMachineImpl implements StateMachine {
           flow.stateFlowStack.clear();
           allFlowsTable.remove(flow.flowId);
           success = true;
+          machineStats.totalStoppedFlows++;
           logInfo(machineId, flowId, "Stopped flow");
         } finally {
           machineWriteLock.unlock();
@@ -196,6 +201,11 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public String getId() {
     return machineId;
+  }
+
+  @Override
+  public StateMachineStatistics getStatistics() {
+    return machineStats;
   }
 
   @Override
@@ -231,10 +241,13 @@ public final class StateMachineImpl implements StateMachine {
             stopFlow(flow.flowId);
           }
 
-          // 4. clear state transition table
+          // 4. print machine stats
+          logInfo(machineId, null, machineStats.toString());
+
+          // 5. clear state transition table
           stateTransitionTable.clear();
 
-          // 5. unregister self
+          // 6. unregister self
           StateMachineRegistry.getInstance().unregister(machineId);
 
           logInfo(machineId, null, "Successfully shut down state machine");
@@ -284,14 +297,14 @@ public final class StateMachineImpl implements StateMachine {
             // in case of transition failure, remember to revert the stateFlowStack
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
-              flow.failures++;
+              flow.flowStats.failures++;
               if (resetMachineToInitOnFailure) {
                 resetMachineToInitOnTransitionFailure(flowId);
               } else {
                 pushNextState(flowId, currentState);
               }
             } else {
-              flow.successes++;
+              flow.flowStats.successes++;
             }
           }
         } finally {
@@ -380,9 +393,9 @@ public final class StateMachineImpl implements StateMachine {
       throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
     }
     if (success) {
-      flow.successes++;
+      flow.flowStats.successes++;
     } else {
-      flow.failures++;
+      flow.flowStats.failures++;
     }
     return success;
   }
@@ -680,10 +693,8 @@ public final class StateMachineImpl implements StateMachine {
    * ensure this doesn't become a problem is by putting a sensible upper bound on the total set of
    * live flows at any given point during the lifetime of a process.
    */
-  private final static class Flow {
+  final static class Flow {
     private final String flowId = UUID.randomUUID().toString();
-    private final long startMillis = System.currentTimeMillis();
-
     private transient String machineId;
 
     private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
@@ -695,20 +706,16 @@ public final class StateMachineImpl implements StateMachine {
     // filled or completely drained but rarely ever modified other than these 2 terminal states.
     private final Stack<State> stateFlowStack = new Stack<>();
 
-    // used to track activity level of a flow
-    private volatile long lastTouchTimeMillis;
-
     // basic flow statistics
-    private int successes;
-    private int failures;
-
-    private long aliveTime() {
-      return TimeUnit.SECONDS.convert(System.currentTimeMillis() - startMillis,
-          TimeUnit.MILLISECONDS);
-    }
+    final FlowStatistics flowStats;
 
     private void touch() {
-      this.lastTouchTimeMillis = System.currentTimeMillis();
+      this.flowStats.lastTouchTimeMillis = System.currentTimeMillis();
+    }
+
+    private Flow() {
+      flowStats = new FlowStatistics();
+      flowStats.flowId = flowId;
     }
 
     @Override
@@ -723,6 +730,10 @@ public final class StateMachineImpl implements StateMachine {
    * 
    * Even though this is not a singleton in practice, it is intended to exist as one instance per
    * its enclosing fsm. It is non-static by design.
+   * 
+   * Also, note the design choice of not having a single global flow purger for all flows in all
+   * state machines in a process. The underlying assumption is that there will be a finite number of
+   * FSMs within a process. At some point in time, this may need to be revisited.
    */
   private final class FlowPurger extends Thread {
     private final long sleepMillis;
@@ -743,11 +754,12 @@ public final class StateMachineImpl implements StateMachine {
           Flow flow = flowIterator.next().getValue();
           if (flow != null) {
             scanned++;
-            if (System.currentTimeMillis() > (flow.lastTouchTimeMillis + flowExpirationMillis)) {
+            if (System.currentTimeMillis() > (flow.flowStats.lastTouchTimeMillis
+                + flowExpirationMillis)) {
               flow.stateFlowStack.clear();
               flowIterator.remove();
-              logInfo(machineId, flow.flowId,
-                  "Successfully purged flow with aliveSeconds:" + flow.aliveTime());
+              logInfo(machineId, flow.flowId, "Successfully purged flow with aliveSeconds:"
+                  + flow.flowStats.getAliveTimeSeconds());
               flow = null;
               purged++;
             }

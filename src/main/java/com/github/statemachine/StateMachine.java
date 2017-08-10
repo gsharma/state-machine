@@ -107,6 +107,11 @@ public interface StateMachine {
   String getId();
 
   /**
+   * Report statistics for this FSM
+   */
+  StateMachineStatistics getStatistics();
+
+  /**
    * Check if the state machine is alive.
    */
   boolean alive();
