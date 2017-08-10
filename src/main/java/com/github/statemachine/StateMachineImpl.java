@@ -274,8 +274,7 @@ public final class StateMachineImpl implements StateMachine {
           }
           currentState = popState(flowId);
           try {
-            final boolean isForwardTransition =
-                isForwardTransition(machineId, currentState, nextState);
+            final boolean isForwardTransition = isForwardTransition(currentState, nextState);
             success = transitionTo(flowId, currentState, nextState, !isForwardTransition);
             if (success) {
               logInfo(machineId, flowId, String.format("Successfully transitioned from %s->%s",
@@ -589,13 +588,11 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  private boolean isForwardTransition(final String stateMachineId, final State stateOne,
-      final State stateTwo) throws StateMachineException {
+  private boolean isForwardTransition(final State stateOne, final State stateTwo)
+      throws StateMachineException {
     boolean forward = false;
     final String transitionId = transitionId(stateOne, stateTwo, true);
-    final StateMachine stateMachine = StateMachineRegistry.getInstance().lookup(stateMachineId);
-    final TransitionFunctor transitionFunctor =
-        stateMachine != null ? stateMachine.findTranstionFunctor(transitionId) : null;
+    final TransitionFunctor transitionFunctor = findTranstionFunctor(transitionId);
     if (transitionFunctor != null) {
       forward = transitionFunctor.getForwardId().equals(transitionId);
       if (!forward) {
