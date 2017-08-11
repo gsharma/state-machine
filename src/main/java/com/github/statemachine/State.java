@@ -9,8 +9,8 @@ import com.github.statemachine.StateMachineException.Code;
  * This object represents immutable metadata about a state.
  */
 public final class State {
-  // auto-generated
   private final String id = UUID.randomUUID().toString();
+  private int pregenHashCode;
 
   // name and customMetadata are optional
   final static int maxStateNameLength = 20;
@@ -24,6 +24,7 @@ public final class State {
     if (name != null && name.isPresent()) {
       if (name.get().trim().length() <= maxStateNameLength) {
         this.name = name.get().trim();
+        this.pregenHashCode = immutableHashCode();
       } else {
         throw new StateMachineException(Code.INVALID_STATE_NAME);
       }
@@ -49,6 +50,10 @@ public final class State {
 
   @Override
   public int hashCode() {
+    return pregenHashCode;
+  }
+
+  private int immutableHashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((id == null) ? 0 : id.hashCode());
