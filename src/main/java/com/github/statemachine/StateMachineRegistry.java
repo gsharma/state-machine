@@ -16,6 +16,9 @@ final class StateMachineRegistry {
   // fugly and pathetic!! really gaurav, you couldn't do better??
   private static ConcurrentMap<String, StateMachine> allStateMachines = new ConcurrentHashMap<>();
 
+  private GlobalStatsDaemon statsGatherer;
+  private final static long statsGathererSleepMillis = 300 * 1000L;
+
   private static final StateMachineRegistry instance = new StateMachineRegistry();
 
   static StateMachineRegistry getInstance() {
@@ -45,6 +48,12 @@ final class StateMachineRegistry {
       @Override
       public void run() {
         logger.info("Shutting down global state machine registry");
+        try {
+          statsGatherer.interrupt();
+          statsGatherer.join();
+          statsGatherer = null;
+        } catch (InterruptedException ignore) {
+        }
         for (final StateMachine stateMachine : allStateMachines.values()) {
           try {
             if (stateMachine.alive()) {
@@ -62,6 +71,41 @@ final class StateMachineRegistry {
         logger.info("Successfully shut down global state machine registry");
       }
     });
+
+    statsGatherer = new GlobalStatsDaemon();
+    statsGatherer.start();
+  }
+
+  /**
+   * Daemon to periodically wake up and gather all FSM stats and dump them to log.
+   */
+  private final static class GlobalStatsDaemon extends Thread {
+    private GlobalStatsDaemon() {
+      setName("Stats-Gatherer");
+      setDaemon(true);
+    }
+
+    @Override
+    public void run() {
+      while (!isInterrupted()) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Global stats daemon woke up to gather all machines' stats");
+        }
+        StringBuilder builder = new StringBuilder("Global state machine statistics");
+        for (final StateMachine stateMachine : allStateMachines.values()) {
+          if (stateMachine != null) {
+            builder.append("\n    ").append(stateMachine.getStatistics().toString());
+          }
+        }
+        logger.info(builder.toString());
+        try {
+          Thread.sleep(statsGathererSleepMillis);
+        } catch (InterruptedException exception) {
+          Thread.currentThread().interrupt();
+        }
+      }
+      logger.info("Successfully shut down global stats daemon");
+    }
   }
 
 }
