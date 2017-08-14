@@ -27,6 +27,7 @@ public class StateMachineTest {
 
   @Test
   public void testStateMachineFlow() throws StateMachineException {
+    // 1. prep transitions
     final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     transitionFunctors.add(toA);
@@ -34,24 +35,100 @@ public class StateMachineTest {
     transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
+
+    // 2. load up the fsm with all its transitions
     final StateMachine machine = new StateMachineImpl(transitionFunctors);
+    assertTrue(machine.alive());
+
+    // 3. start a flow
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
+    // 4a. execute a flow transition
     // INIT->A
     assertTrue(machine.transitionTo(flowId, toA.getToState()));
     assertEquals(toA.getToState(), machine.readCurrentState(flowId));
 
+    // 4b. execute a flow transition
     // A->B
     assertTrue(machine.transitionTo(flowId, AtoB.getToState()));
     assertEquals(AtoB.getToState(), machine.readCurrentState(flowId));
 
+    // 4c. execute a flow transition
     // B->C
     assertTrue(machine.transitionTo(flowId, BtoC.getToState()));
     assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
+    // 5. stop the flow
     assertTrue(machine.stopFlow(flowId));
 
+    // 6. stop the fsm
+    assertTrue(machine.alive());
+    assertTrue(machine.demolish());
+    assertFalse(machine.alive());
+  }
+
+  @Test
+  public void testMultipleFlows() throws StateMachineException {
+    // 1. prep transitions
+    final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    transitionFunctors.add(toA);
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    transitionFunctors.add(AtoB);
+    final TransitionBVsC BtoC = new TransitionBVsC();
+    transitionFunctors.add(BtoC);
+
+    // 2. load up the fsm with all its transitions
+    final StateMachine machine = new StateMachineImpl(transitionFunctors);
+    assertTrue(machine.alive());
+
+    // 3. start a flow
+    String flowId = machine.startFlow();
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
+
+    // 4a. execute a flow transition
+    // INIT->A
+    assertTrue(machine.transitionTo(flowId, toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState(flowId));
+
+    // 4b. execute a flow transition
+    // A->B
+    assertTrue(machine.transitionTo(flowId, AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState(flowId));
+
+    // 4c. execute a flow transition
+    // B->C
+    assertTrue(machine.transitionTo(flowId, BtoC.getToState()));
+    assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
+
+    // 5. stop the flow
+    assertTrue(machine.stopFlow(flowId));
+
+    // test another flow for the same fsm
+    // 3. start a flow
+    flowId = machine.startFlow();
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
+
+    // 4a. execute a flow transition
+    // INIT->A
+    assertTrue(machine.transitionTo(flowId, toA.getToState()));
+    assertEquals(toA.getToState(), machine.readCurrentState(flowId));
+
+    // 4b. execute a flow transition
+    // A->B
+    assertTrue(machine.transitionTo(flowId, AtoB.getToState()));
+    assertEquals(AtoB.getToState(), machine.readCurrentState(flowId));
+
+    // 4c. execute a flow transition
+    // B->A
+    assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+    assertEquals(AtoB.getFromState(), machine.readCurrentState(flowId));
+
+    // 5. stop the flow
+    assertTrue(machine.stopFlow(flowId));
+
+    // 6. stop the fsm
     assertTrue(machine.alive());
     assertTrue(machine.demolish());
     assertFalse(machine.alive());
