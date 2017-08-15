@@ -77,8 +77,10 @@ public final class StateMachineImpl implements StateMachine {
   private final WriteLock machineWriteLock = machineSuperLock.writeLock();
   private final ReadLock machineReadLock = machineSuperLock.readLock();
 
-  private volatile boolean resetMachineToInitOnFailure = false;
-  private volatile long flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
+  private boolean resetMachineToInitOnFailure;
+  private long flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
+
+  private StateMachineConfiguration config;
 
   public static State notStartedState;
   static {
@@ -88,8 +90,8 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  public StateMachineImpl(final List<TransitionFunctor> transitionFunctors)
-      throws StateMachineException {
+  public StateMachineImpl(final StateMachineConfiguration config,
+      final List<TransitionFunctor> transitionFunctors) throws StateMachineException {
     logInfo(machineId, null, "Firing up state machine");
     if (alive()) {
       logInfo(machineId, null, "Cannot fire up an already running state machine");
@@ -98,6 +100,12 @@ public final class StateMachineImpl implements StateMachine {
     try {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
+          if (config == null) {
+            throw new StateMachineException(Code.INVALID_CONFIG);
+          }
+          this.config = config;
+          this.resetMachineToInitOnFailure = config.resetMachineToInitOnFailure();
+          this.flowExpirationMillis = config.getFlowExpirationMillis();
           if (transitionFunctors == null || transitionFunctors.isEmpty()) {
             throw new StateMachineException(Code.INVALID_TRANSITIONS);
           }
@@ -205,18 +213,13 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
+  public StateMachineConfiguration getConfiguration() {
+    return config;
+  }
+
+  @Override
   public StateMachineStatistics getStatistics() {
     return machineStats;
-  }
-
-  @Override
-  public void setFlowExpirationMillis(long flowExpirationMillis) {
-    this.flowExpirationMillis = flowExpirationMillis;
-  }
-
-  @Override
-  public void resetMachineOnTransitionFailure(final boolean resetMachineOnTransitionFailure) {
-    this.resetMachineToInitOnFailure = resetMachineOnTransitionFailure;
   }
 
   @Override
@@ -740,7 +743,7 @@ public final class StateMachineImpl implements StateMachine {
     private final long sleepMillis;
 
     private FlowPurger(final long sleepMillis) {
-      setName("Flow-Purger");
+      setName("flow-purger");
       setDaemon(true);
       this.sleepMillis = sleepMillis;
     }

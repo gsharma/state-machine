@@ -44,7 +44,7 @@ final class StateMachineRegistry {
   }
 
   private StateMachineRegistry() {
-    Runtime.getRuntime().addShutdownHook(new Thread("Registry-Purger") {
+    Runtime.getRuntime().addShutdownHook(new Thread("registry-purger") {
       @Override
       public void run() {
         logger.info("Shutting down global state machine registry");
@@ -81,7 +81,7 @@ final class StateMachineRegistry {
    */
   private final static class GlobalStatsDaemon extends Thread {
     private GlobalStatsDaemon() {
-      setName("Stats-Gatherer");
+      setName("stats-gatherer");
       setDaemon(true);
     }
 
