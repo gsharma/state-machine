@@ -225,6 +225,7 @@ public class StateMachineTest {
     assertTrue(machine.rewind(flowId, RewindMode.ALL_THE_WAY_STEP_WISE));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
+    logger.info("route::" + machine.printStateTransitionRoute(flowId));
     assertTrue(machine.stopFlow(flowId));
 
     assertTrue(machine.alive());

@@ -13,7 +13,7 @@ public final class FlowStatistics {
   int transitionFailures;
   // used to track activity level of a flow
   long lastTouchTimeMillis;
-  // bounded at 100
+  // bounded at 100; yay, hard-coded shit
   final Deque<StateTimePair> boundedStateRoute = new ArrayDeque<>();
 
   public String getFlowId() {
