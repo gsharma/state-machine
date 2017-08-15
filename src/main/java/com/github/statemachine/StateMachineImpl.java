@@ -19,6 +19,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.github.statemachine.FlowStatistics.StateTimePair;
 import com.github.statemachine.StateMachineException.Code;
 
 /**
@@ -296,6 +297,7 @@ public final class StateMachineImpl implements StateMachine {
             if (success) {
               logInfo(machineId, flowId, String.format("Successfully transitioned from %s->%s",
                   currentState.getName(), nextState.getName()));
+              flow.pumpRouteBuffer(nextState);
             }
           } finally {
             // in case of transition failure, remember to revert the stateFlowStack
@@ -304,6 +306,7 @@ public final class StateMachineImpl implements StateMachine {
               flow.flowStats.transitionFailures++;
               if (resetMachineToInitOnFailure) {
                 resetMachineToInitOnTransitionFailure(flowId);
+                flow.pumpRouteBuffer(notStartedState);
               } else {
                 pushNextState(flowId, currentState);
               }
@@ -445,7 +448,8 @@ public final class StateMachineImpl implements StateMachine {
     try {
       if (flow.flowReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          route = flow.stateFlowStack.toString();
+          // route = flow.stateFlowStack.toString();
+          route = flow.flowStats.boundedStateRoute.toString();
         } finally {
           flow.flowReadLock.unlock();
         }
@@ -720,6 +724,23 @@ public final class StateMachineImpl implements StateMachine {
     private Flow() {
       flowStats = new FlowStatistics();
       flowStats.flowId = flowId;
+    }
+
+    // pump state transitions with time spent in every state in flow stats
+    private void pumpRouteBuffer(final State nextState) {
+      final StateTimePair current = flowStats.boundedStateRoute.peekLast();
+      if (current != null) {
+        current.elapsedMillis = System.currentTimeMillis() - current.startMillis;
+      }
+      if (nextState != null) {
+        final StateTimePair next = new StateTimePair();
+        next.stateId = nextState.getName();
+        next.startMillis = System.currentTimeMillis();
+        flowStats.boundedStateRoute.addLast(next);
+        if (flowStats.boundedStateRoute.size() >= 100) {
+          flowStats.boundedStateRoute.pollFirst();
+        }
+      }
     }
 
     @Override

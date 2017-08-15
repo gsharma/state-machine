@@ -1,5 +1,8 @@
 package com.github.statemachine;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 /**
  * Simple statistics holder for a flow.
  */
@@ -10,6 +13,8 @@ public final class FlowStatistics {
   int transitionFailures;
   // used to track activity level of a flow
   long lastTouchTimeMillis;
+  // bounded at 100
+  final Deque<StateTimePair> boundedStateRoute = new ArrayDeque<>();
 
   public String getFlowId() {
     return flowId;
@@ -32,6 +37,17 @@ public final class FlowStatistics {
     return "FlowStatistics [flowId=" + flowId + ", transitionSuccesses=" + transitionSuccesses
         + ", transitionFailures=" + transitionFailures + ", lastTouchTimeMillis="
         + lastTouchTimeMillis + ", aliveTimeMillis=" + getAliveTimeMillis() + "]";
+  }
+
+  public final static class StateTimePair {
+    public String stateId;
+    public long startMillis;
+    public long elapsedMillis;
+
+    @Override
+    public String toString() {
+      return "StateTimePair [stateId=" + stateId + ", elapsedMillis=" + elapsedMillis + "]";
+    }
   }
 
 }
