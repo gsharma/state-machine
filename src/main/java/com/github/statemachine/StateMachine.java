@@ -1,5 +1,7 @@
 package com.github.statemachine;
 
+import java.util.List;
+
 /**
  * A simple Finite State Machine. Depending on how the transitions are implemented, this machine may
  * be setup as either deterministic or non-deterministic. There's nothing that forces the user's
@@ -7,6 +9,9 @@ package com.github.statemachine;
  * deterministic.
  * 
  * Notes for users:<br>
+ * 0a. correctness is the most important virtue of this fsm<br>
+ * 0b. less boilerplate code is the next most important virtue<br>
+ * 
  * 1. this FSM instance is thread-safe<br>
  * 
  * 2. it is designed to not be singleton within a process, so, if there's a desire to have many
@@ -106,5 +111,27 @@ public interface StateMachine {
    * Shutdown the state machine and clear all state flows and intermediate data structures.
    */
   boolean demolish() throws StateMachineException;
+
+  /**
+   * A simple builder to let users use fluent APIs to build FSMs.
+   */
+  public final static class StateMachineBuilder {
+    private StateMachineConfiguration config;
+    private List<TransitionFunctor> transitionFunctors;
+
+    public StateMachineBuilder config(final StateMachineConfiguration config) {
+      this.config = config;
+      return this;
+    }
+
+    public StateMachineBuilder transtionFunctors(final List<TransitionFunctor> transitionFunctors) {
+      this.transitionFunctors = transitionFunctors;
+      return this;
+    }
+
+    public StateMachine build() throws StateMachineException {
+      return new StateMachineImpl(config, transitionFunctors);
+    }
+  }
 
 }

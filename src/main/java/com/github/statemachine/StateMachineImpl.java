@@ -90,7 +90,7 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  public StateMachineImpl(final StateMachineConfiguration config,
+  StateMachineImpl(final StateMachineConfiguration config,
       final List<TransitionFunctor> transitionFunctors) throws StateMachineException {
     logInfo(machineId, null, "Firing up state machine");
     if (alive()) {

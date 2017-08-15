@@ -38,7 +38,8 @@ public class StateMachineTest {
 
     // 2. load up the fsm with all its transitions
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
@@ -82,7 +83,8 @@ public class StateMachineTest {
 
     // 2. load up the fsm with all its transitions
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
@@ -148,7 +150,8 @@ public class StateMachineTest {
     final TransitionCVsD CtoD = new TransitionCVsD();
     transitionFunctors.add(CtoD);
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -185,7 +188,8 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -238,7 +242,8 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -283,7 +288,8 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -320,7 +326,8 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
     final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = new StateMachineImpl(config, transitionFunctors);
+    final StateMachine machine = new StateMachine.StateMachineBuilder().config(config)
+        .transtionFunctors(transitionFunctors).build();
 
     final AtomicInteger toACounterSuccess = new AtomicInteger();
     final AtomicInteger toACounterFailure = new AtomicInteger();
@@ -408,7 +415,8 @@ public class StateMachineTest {
         StateMachine machine = null;
         try {
           final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-          machine = new StateMachineImpl(config, transitionFunctors);
+          machine = new StateMachine.StateMachineBuilder().config(config)
+              .transtionFunctors(transitionFunctors).build();
           final String flowId = machine.startFlow();
           assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
