@@ -384,9 +384,6 @@ public final class StateMachineImpl implements StateMachine {
                 return success;
               }
               resetMachineToInitOnTransitionFailure(flowId);
-              flow.stateFlowStack.clear();
-              pushNextState(flowId, notStartedState);
-              flow.pumpRouteBuffer(notStartedState);
               success = true;
               break;
             default:
@@ -548,6 +545,7 @@ public final class StateMachineImpl implements StateMachine {
         try {
           flow.stateFlowStack.clear();
           pushNextState(flowId, notStartedState);
+          flow.pumpRouteBuffer(notStartedState);
         } finally {
           flow.flowWriteLock.unlock();
         }
