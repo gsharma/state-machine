@@ -40,13 +40,13 @@ public final class FlowStatistics {
   }
 
   public final static class StateTimePair {
-    public String stateId;
+    public String stateName;
     public long startMillis;
     public long elapsedMillis;
 
     @Override
     public String toString() {
-      return "StateTimePair [stateId=" + stateId + ", elapsedMillis=" + elapsedMillis + "]";
+      return "StateTimePair [state=" + stateName + ", elapsedMillis=" + elapsedMillis + "]";
     }
   }
 

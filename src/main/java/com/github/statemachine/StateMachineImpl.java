@@ -735,7 +735,7 @@ public final class StateMachineImpl implements StateMachine {
       }
       if (nextState != null) {
         final StateTimePair next = new StateTimePair();
-        next.stateId = nextState.getName();
+        next.stateName = nextState.getName();
         next.startMillis = System.currentTimeMillis();
         flowStats.boundedStateRoute.addLast(next);
         if (flowStats.boundedStateRoute.size() >= 100) {
