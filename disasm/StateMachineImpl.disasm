@@ -1,0 +1,2570 @@
+Classfile com/github/statemachine/StateMachineImpl.class
+  Last modified Aug 16, 2017; size 20443 bytes
+  MD5 checksum adee2504c4c32b05068dc72793ccbd34
+  Compiled from "StateMachineImpl.java"
+public final class com.github.statemachine.StateMachineImpl implements com.github.statemachine.StateMachine
+  minor version: 0
+  major version: 52
+  flags: ACC_PUBLIC, ACC_FINAL, ACC_SUPER
+Constant pool:
+    #1 = Class              #2            // com/github/statemachine/StateMachineImpl
+    #2 = Utf8               com/github/statemachine/StateMachineImpl
+    #3 = Class              #4            // java/lang/Object
+    #4 = Utf8               java/lang/Object
+    #5 = Class              #6            // com/github/statemachine/StateMachine
+    #6 = Utf8               com/github/statemachine/StateMachine
+    #7 = Utf8               logger
+    #8 = Utf8               Lorg/apache/logging/log4j/Logger;
+    #9 = Utf8               machineId
+   #10 = Utf8               Ljava/lang/String;
+   #11 = Utf8               lockAcquisitionMillis
+   #12 = Utf8               J
+   #13 = Utf8               ConstantValue
+   #14 = Long               100l
+   #16 = Utf8               flowPurgerSleepMillis
+   #17 = Long               180000l
+   #19 = Utf8               machineAlive
+   #20 = Utf8               Ljava/util/concurrent/atomic/AtomicBoolean;
+   #21 = Utf8               stateTransitionTable
+   #22 = Utf8               Ljava/util/concurrent/ConcurrentMap;
+   #23 = Utf8               Signature
+   #24 = Utf8               Ljava/util/concurrent/ConcurrentMap<Ljava/lang/String;Lcom/github/statemachine/TransitionFunctor;>;
+   #25 = Utf8               allFlowsTable
+   #26 = Utf8               Ljava/util/concurrent/ConcurrentMap<Ljava/lang/String;Lcom/github/statemachine/StateMachineImpl$Flow;>;
+   #27 = Utf8               flowPurgerDaemon
+   #28 = Utf8               Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+   #29 = Utf8               machineStats
+   #30 = Utf8               Lcom/github/statemachine/StateMachineStatistics;
+   #31 = Utf8               machineSuperLock
+   #32 = Utf8               Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+   #33 = Utf8               machineWriteLock
+   #34 = Utf8               Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+   #35 = Utf8               machineReadLock
+   #36 = Utf8               Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+   #37 = Utf8               resetMachineToInitOnFailure
+   #38 = Utf8               Z
+   #39 = Utf8               flowExpirationMillis
+   #40 = Utf8               config
+   #41 = Utf8               Lcom/github/statemachine/StateMachineConfiguration;
+   #42 = Utf8               notStartedState
+   #43 = Utf8               Lcom/github/statemachine/State;
+   #44 = Utf8               $SWITCH_TABLE$com$github$statemachine$RewindMode
+   #45 = Utf8               [I
+   #46 = Utf8               <clinit>
+   #47 = Utf8               ()V
+   #48 = Utf8               Code
+   #49 = Methodref          #50.#52       // java/lang/Class.getSimpleName:()Ljava/lang/String;
+   #50 = Class              #51           // java/lang/Class
+   #51 = Utf8               java/lang/Class
+   #52 = NameAndType        #53:#54       // getSimpleName:()Ljava/lang/String;
+   #53 = Utf8               getSimpleName
+   #54 = Utf8               ()Ljava/lang/String;
+   #55 = Methodref          #56.#58       // org/apache/logging/log4j/LogManager.getLogger:(Ljava/lang/String;)Lorg/apache/logging/log4j/Logger;
+   #56 = Class              #57           // org/apache/logging/log4j/LogManager
+   #57 = Utf8               org/apache/logging/log4j/LogManager
+   #58 = NameAndType        #59:#60       // getLogger:(Ljava/lang/String;)Lorg/apache/logging/log4j/Logger;
+   #59 = Utf8               getLogger
+   #60 = Utf8               (Ljava/lang/String;)Lorg/apache/logging/log4j/Logger;
+   #61 = Fieldref           #1.#62        // com/github/statemachine/StateMachineImpl.logger:Lorg/apache/logging/log4j/Logger;
+   #62 = NameAndType        #7:#8         // logger:Lorg/apache/logging/log4j/Logger;
+   #63 = Class              #64           // com/github/statemachine/State
+   #64 = Utf8               com/github/statemachine/State
+   #65 = String             #66           // INIT
+   #66 = Utf8               INIT
+   #67 = Methodref          #68.#70       // java/util/Optional.of:(Ljava/lang/Object;)Ljava/util/Optional;
+   #68 = Class              #69           // java/util/Optional
+   #69 = Utf8               java/util/Optional
+   #70 = NameAndType        #71:#72       // of:(Ljava/lang/Object;)Ljava/util/Optional;
+   #71 = Utf8               of
+   #72 = Utf8               (Ljava/lang/Object;)Ljava/util/Optional;
+   #73 = Methodref          #63.#74       // com/github/statemachine/State."<init>":(Ljava/util/Optional;)V
+   #74 = NameAndType        #75:#76       // "<init>":(Ljava/util/Optional;)V
+   #75 = Utf8               <init>
+   #76 = Utf8               (Ljava/util/Optional;)V
+   #77 = Fieldref           #1.#78        // com/github/statemachine/StateMachineImpl.notStartedState:Lcom/github/statemachine/State;
+   #78 = NameAndType        #42:#43       // notStartedState:Lcom/github/statemachine/State;
+   #79 = Class              #80           // com/github/statemachine/StateMachineException
+   #80 = Utf8               com/github/statemachine/StateMachineException
+   #81 = Utf8               LineNumberTable
+   #82 = Utf8               LocalVariableTable
+   #83 = Utf8               StackMapTable
+   #84 = Utf8               (Lcom/github/statemachine/StateMachineConfiguration;Ljava/util/List;)V
+   #85 = Utf8               Exceptions
+   #86 = Utf8               (Lcom/github/statemachine/StateMachineConfiguration;Ljava/util/List<Lcom/github/statemachine/TransitionFunctor;>;)V
+   #87 = Methodref          #3.#88        // java/lang/Object."<init>":()V
+   #88 = NameAndType        #75:#47       // "<init>":()V
+   #89 = Methodref          #90.#92       // java/util/UUID.randomUUID:()Ljava/util/UUID;
+   #90 = Class              #91           // java/util/UUID
+   #91 = Utf8               java/util/UUID
+   #92 = NameAndType        #93:#94       // randomUUID:()Ljava/util/UUID;
+   #93 = Utf8               randomUUID
+   #94 = Utf8               ()Ljava/util/UUID;
+   #95 = Methodref          #90.#96       // java/util/UUID.toString:()Ljava/lang/String;
+   #96 = NameAndType        #97:#54       // toString:()Ljava/lang/String;
+   #97 = Utf8               toString
+   #98 = Fieldref           #1.#99        // com/github/statemachine/StateMachineImpl.machineId:Ljava/lang/String;
+   #99 = NameAndType        #9:#10        // machineId:Ljava/lang/String;
+  #100 = Class              #101          // java/util/concurrent/atomic/AtomicBoolean
+  #101 = Utf8               java/util/concurrent/atomic/AtomicBoolean
+  #102 = Methodref          #100.#88      // java/util/concurrent/atomic/AtomicBoolean."<init>":()V
+  #103 = Fieldref           #1.#104       // com/github/statemachine/StateMachineImpl.machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+  #104 = NameAndType        #19:#20       // machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+  #105 = Class              #106          // java/util/concurrent/ConcurrentHashMap
+  #106 = Utf8               java/util/concurrent/ConcurrentHashMap
+  #107 = Methodref          #105.#88      // java/util/concurrent/ConcurrentHashMap."<init>":()V
+  #108 = Fieldref           #1.#109       // com/github/statemachine/StateMachineImpl.stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+  #109 = NameAndType        #21:#22       // stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+  #110 = Fieldref           #1.#111       // com/github/statemachine/StateMachineImpl.allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+  #111 = NameAndType        #25:#22       // allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+  #112 = Class              #113          // java/util/concurrent/locks/ReentrantReadWriteLock
+  #113 = Utf8               java/util/concurrent/locks/ReentrantReadWriteLock
+  #114 = Methodref          #112.#115     // java/util/concurrent/locks/ReentrantReadWriteLock."<init>":(Z)V
+  #115 = NameAndType        #75:#116      // "<init>":(Z)V
+  #116 = Utf8               (Z)V
+  #117 = Fieldref           #1.#118       // com/github/statemachine/StateMachineImpl.machineSuperLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+  #118 = NameAndType        #31:#32       // machineSuperLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+  #119 = Methodref          #112.#120     // java/util/concurrent/locks/ReentrantReadWriteLock.writeLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #120 = NameAndType        #121:#122     // writeLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #121 = Utf8               writeLock
+  #122 = Utf8               ()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #123 = Fieldref           #1.#124       // com/github/statemachine/StateMachineImpl.machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #124 = NameAndType        #33:#34       // machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #125 = Methodref          #112.#126     // java/util/concurrent/locks/ReentrantReadWriteLock.readLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #126 = NameAndType        #127:#128     // readLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #127 = Utf8               readLock
+  #128 = Utf8               ()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #129 = Fieldref           #1.#130       // com/github/statemachine/StateMachineImpl.machineReadLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #130 = NameAndType        #35:#36       // machineReadLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #131 = Fieldref           #132.#134     // java/util/concurrent/TimeUnit.MINUTES:Ljava/util/concurrent/TimeUnit;
+  #132 = Class              #133          // java/util/concurrent/TimeUnit
+  #133 = Utf8               java/util/concurrent/TimeUnit
+  #134 = NameAndType        #135:#136     // MINUTES:Ljava/util/concurrent/TimeUnit;
+  #135 = Utf8               MINUTES
+  #136 = Utf8               Ljava/util/concurrent/TimeUnit;
+  #137 = Long               10l
+  #139 = Methodref          #132.#140     // java/util/concurrent/TimeUnit.toMillis:(J)J
+  #140 = NameAndType        #141:#142     // toMillis:(J)J
+  #141 = Utf8               toMillis
+  #142 = Utf8               (J)J
+  #143 = Fieldref           #1.#144       // com/github/statemachine/StateMachineImpl.flowExpirationMillis:J
+  #144 = NameAndType        #39:#12       // flowExpirationMillis:J
+  #145 = String             #146          // Firing up state machine
+  #146 = Utf8               Firing up state machine
+  #147 = Methodref          #1.#148       // com/github/statemachine/StateMachineImpl.logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #148 = NameAndType        #149:#150     // logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #149 = Utf8               logInfo
+  #150 = Utf8               (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #151 = Methodref          #1.#152       // com/github/statemachine/StateMachineImpl.alive:()Z
+  #152 = NameAndType        #153:#154     // alive:()Z
+  #153 = Utf8               alive
+  #154 = Utf8               ()Z
+  #155 = String             #156          // Cannot fire up an already running state machine
+  #156 = Utf8               Cannot fire up an already running state machine
+  #157 = Fieldref           #132.#158     // java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+  #158 = NameAndType        #159:#136     // MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+  #159 = Utf8               MILLISECONDS
+  #160 = Methodref          #161.#163     // java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+  #161 = Class              #162          // java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock
+  #162 = Utf8               java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock
+  #163 = NameAndType        #164:#165     // tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+  #164 = Utf8               tryLock
+  #165 = Utf8               (JLjava/util/concurrent/TimeUnit;)Z
+  #166 = Fieldref           #167.#169     // com/github/statemachine/StateMachineException$Code.INVALID_CONFIG:Lcom/github/statemachine/StateMachineException$Code;
+  #167 = Class              #168          // com/github/statemachine/StateMachineException$Code
+  #168 = Utf8               com/github/statemachine/StateMachineException$Code
+  #169 = NameAndType        #170:#171     // INVALID_CONFIG:Lcom/github/statemachine/StateMachineException$Code;
+  #170 = Utf8               INVALID_CONFIG
+  #171 = Utf8               Lcom/github/statemachine/StateMachineException$Code;
+  #172 = Methodref          #79.#173      // com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;)V
+  #173 = NameAndType        #75:#174      // "<init>":(Lcom/github/statemachine/StateMachineException$Code;)V
+  #174 = Utf8               (Lcom/github/statemachine/StateMachineException$Code;)V
+  #175 = Fieldref           #1.#176       // com/github/statemachine/StateMachineImpl.config:Lcom/github/statemachine/StateMachineConfiguration;
+  #176 = NameAndType        #40:#41       // config:Lcom/github/statemachine/StateMachineConfiguration;
+  #177 = Methodref          #178.#180     // com/github/statemachine/StateMachineConfiguration.resetMachineToInitOnFailure:()Z
+  #178 = Class              #179          // com/github/statemachine/StateMachineConfiguration
+  #179 = Utf8               com/github/statemachine/StateMachineConfiguration
+  #180 = NameAndType        #37:#154      // resetMachineToInitOnFailure:()Z
+  #181 = Fieldref           #1.#182       // com/github/statemachine/StateMachineImpl.resetMachineToInitOnFailure:Z
+  #182 = NameAndType        #37:#38       // resetMachineToInitOnFailure:Z
+  #183 = Methodref          #178.#184     // com/github/statemachine/StateMachineConfiguration.getFlowExpirationMillis:()J
+  #184 = NameAndType        #185:#186     // getFlowExpirationMillis:()J
+  #185 = Utf8               getFlowExpirationMillis
+  #186 = Utf8               ()J
+  #187 = InterfaceMethodref #188.#190     // java/util/List.isEmpty:()Z
+  #188 = Class              #189          // java/util/List
+  #189 = Utf8               java/util/List
+  #190 = NameAndType        #191:#154     // isEmpty:()Z
+  #191 = Utf8               isEmpty
+  #192 = Fieldref           #167.#193     // com/github/statemachine/StateMachineException$Code.INVALID_TRANSITIONS:Lcom/github/statemachine/StateMachineException$Code;
+  #193 = NameAndType        #194:#171     // INVALID_TRANSITIONS:Lcom/github/statemachine/StateMachineException$Code;
+  #194 = Utf8               INVALID_TRANSITIONS
+  #195 = InterfaceMethodref #188.#196     // java/util/List.iterator:()Ljava/util/Iterator;
+  #196 = NameAndType        #197:#198     // iterator:()Ljava/util/Iterator;
+  #197 = Utf8               iterator
+  #198 = Utf8               ()Ljava/util/Iterator;
+  #199 = InterfaceMethodref #200.#202     // java/util/Iterator.next:()Ljava/lang/Object;
+  #200 = Class              #201          // java/util/Iterator
+  #201 = Utf8               java/util/Iterator
+  #202 = NameAndType        #203:#204     // next:()Ljava/lang/Object;
+  #203 = Utf8               next
+  #204 = Utf8               ()Ljava/lang/Object;
+  #205 = Class              #206          // com/github/statemachine/TransitionFunctor
+  #206 = Utf8               com/github/statemachine/TransitionFunctor
+  #207 = Methodref          #205.#208     // com/github/statemachine/TransitionFunctor.getForwardId:()Ljava/lang/String;
+  #208 = NameAndType        #209:#54      // getForwardId:()Ljava/lang/String;
+  #209 = Utf8               getForwardId
+  #210 = InterfaceMethodref #211.#213     // java/util/concurrent/ConcurrentMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+  #211 = Class              #212          // java/util/concurrent/ConcurrentMap
+  #212 = Utf8               java/util/concurrent/ConcurrentMap
+  #213 = NameAndType        #214:#215     // put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+  #214 = Utf8               put
+  #215 = Utf8               (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+  #216 = Methodref          #205.#217     // com/github/statemachine/TransitionFunctor.getReverseId:()Ljava/lang/String;
+  #217 = NameAndType        #218:#54      // getReverseId:()Ljava/lang/String;
+  #218 = Utf8               getReverseId
+  #219 = InterfaceMethodref #200.#220     // java/util/Iterator.hasNext:()Z
+  #220 = NameAndType        #221:#154     // hasNext:()Z
+  #221 = Utf8               hasNext
+  #222 = Class              #223          // java/lang/StringBuilder
+  #223 = Utf8               java/lang/StringBuilder
+  #224 = String             #225          // Successfully hydrated stateTransitionTable:
+  #225 = Utf8               Successfully hydrated stateTransitionTable:
+  #226 = Methodref          #222.#227     // java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+  #227 = NameAndType        #75:#228      // "<init>":(Ljava/lang/String;)V
+  #228 = Utf8               (Ljava/lang/String;)V
+  #229 = Methodref          #222.#230     // java/lang/StringBuilder.append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+  #230 = NameAndType        #231:#232     // append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+  #231 = Utf8               append
+  #232 = Utf8               (Ljava/lang/Object;)Ljava/lang/StringBuilder;
+  #233 = Methodref          #222.#96      // java/lang/StringBuilder.toString:()Ljava/lang/String;
+  #234 = Methodref          #235.#237     // java/lang/Thread.currentThread:()Ljava/lang/Thread;
+  #235 = Class              #236          // java/lang/Thread
+  #236 = Utf8               java/lang/Thread
+  #237 = NameAndType        #238:#239     // currentThread:()Ljava/lang/Thread;
+  #238 = Utf8               currentThread
+  #239 = Utf8               ()Ljava/lang/Thread;
+  #240 = Class              #241          // com/github/statemachine/StateMachineImpl$1
+  #241 = Utf8               com/github/statemachine/StateMachineImpl$1
+  #242 = Methodref          #240.#243     // com/github/statemachine/StateMachineImpl$1."<init>":(Lcom/github/statemachine/StateMachineImpl;)V
+  #243 = NameAndType        #75:#244      // "<init>":(Lcom/github/statemachine/StateMachineImpl;)V
+  #244 = Utf8               (Lcom/github/statemachine/StateMachineImpl;)V
+  #245 = Methodref          #235.#246     // java/lang/Thread.setUncaughtExceptionHandler:(Ljava/lang/Thread$UncaughtExceptionHandler;)V
+  #246 = NameAndType        #247:#248     // setUncaughtExceptionHandler:(Ljava/lang/Thread$UncaughtExceptionHandler;)V
+  #247 = Utf8               setUncaughtExceptionHandler
+  #248 = Utf8               (Ljava/lang/Thread$UncaughtExceptionHandler;)V
+  #249 = Class              #250          // com/github/statemachine/StateMachineImpl$FlowPurger
+  #250 = Utf8               com/github/statemachine/StateMachineImpl$FlowPurger
+  #251 = Methodref          #249.#252     // com/github/statemachine/StateMachineImpl$FlowPurger."<init>":(Lcom/github/statemachine/StateMachineImpl;JLcom/github/statemachine/StateMachineImpl$FlowPurger;)V
+  #252 = NameAndType        #75:#253      // "<init>":(Lcom/github/statemachine/StateMachineImpl;JLcom/github/statemachine/StateMachineImpl$FlowPurger;)V
+  #253 = Utf8               (Lcom/github/statemachine/StateMachineImpl;JLcom/github/statemachine/StateMachineImpl$FlowPurger;)V
+  #254 = Fieldref           #1.#255       // com/github/statemachine/StateMachineImpl.flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+  #255 = NameAndType        #27:#28       // flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+  #256 = Methodref          #249.#257     // com/github/statemachine/StateMachineImpl$FlowPurger.start:()V
+  #257 = NameAndType        #258:#47      // start:()V
+  #258 = Utf8               start
+  #259 = Class              #260          // com/github/statemachine/StateMachineStatistics
+  #260 = Utf8               com/github/statemachine/StateMachineStatistics
+  #261 = Methodref          #259.#227     // com/github/statemachine/StateMachineStatistics."<init>":(Ljava/lang/String;)V
+  #262 = Fieldref           #1.#263       // com/github/statemachine/StateMachineImpl.machineStats:Lcom/github/statemachine/StateMachineStatistics;
+  #263 = NameAndType        #29:#30       // machineStats:Lcom/github/statemachine/StateMachineStatistics;
+  #264 = Methodref          #100.#265     // java/util/concurrent/atomic/AtomicBoolean.set:(Z)V
+  #265 = NameAndType        #266:#116     // set:(Z)V
+  #266 = Utf8               set
+  #267 = String             #268          // Successfully fired up state machine
+  #268 = Utf8               Successfully fired up state machine
+  #269 = Methodref          #270.#272     // com/github/statemachine/StateMachineRegistry.getInstance:()Lcom/github/statemachine/StateMachineRegistry;
+  #270 = Class              #271          // com/github/statemachine/StateMachineRegistry
+  #271 = Utf8               com/github/statemachine/StateMachineRegistry
+  #272 = NameAndType        #273:#274     // getInstance:()Lcom/github/statemachine/StateMachineRegistry;
+  #273 = Utf8               getInstance
+  #274 = Utf8               ()Lcom/github/statemachine/StateMachineRegistry;
+  #275 = Methodref          #270.#276     // com/github/statemachine/StateMachineRegistry.register:(Lcom/github/statemachine/StateMachine;)V
+  #276 = NameAndType        #277:#278     // register:(Lcom/github/statemachine/StateMachine;)V
+  #277 = Utf8               register
+  #278 = Utf8               (Lcom/github/statemachine/StateMachine;)V
+  #279 = Methodref          #161.#280     // java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+  #280 = NameAndType        #281:#47      // unlock:()V
+  #281 = Utf8               unlock
+  #282 = Fieldref           #167.#283     // com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+  #283 = NameAndType        #284:#171     // OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+  #284 = Utf8               OPERATION_LOCK_ACQUISITION_FAILURE
+  #285 = String             #286          // Timed out while trying to curate state machine
+  #286 = Utf8               Timed out while trying to curate state machine
+  #287 = Methodref          #79.#288      // com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+  #288 = NameAndType        #75:#289      // "<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+  #289 = Utf8               (Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+  #290 = Methodref          #79.#291      // com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+  #291 = NameAndType        #75:#292      // "<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+  #292 = Utf8               (Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+  #293 = Class              #294          // java/lang/InterruptedException
+  #294 = Utf8               java/lang/InterruptedException
+  #295 = Utf8               this
+  #296 = Utf8               Lcom/github/statemachine/StateMachineImpl;
+  #297 = Utf8               transitionFunctors
+  #298 = Utf8               Ljava/util/List;
+  #299 = Utf8               transitionFunctor
+  #300 = Utf8               Lcom/github/statemachine/TransitionFunctor;
+  #301 = Utf8               exception
+  #302 = Utf8               Ljava/lang/InterruptedException;
+  #303 = Utf8               LocalVariableTypeTable
+  #304 = Utf8               Ljava/util/List<Lcom/github/statemachine/TransitionFunctor;>;
+  #305 = Class              #306          // java/lang/Throwable
+  #306 = Utf8               java/lang/Throwable
+  #307 = Utf8               startFlow
+  #308 = Methodref          #1.#309       // com/github/statemachine/StateMachineImpl.machineAlive:()V
+  #309 = NameAndType        #19:#47       // machineAlive:()V
+  #310 = Class              #311          // com/github/statemachine/StateMachineImpl$Flow
+  #311 = Utf8               com/github/statemachine/StateMachineImpl$Flow
+  #312 = Methodref          #310.#313     // com/github/statemachine/StateMachineImpl$Flow."<init>":(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+  #313 = NameAndType        #75:#314      // "<init>":(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+  #314 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;)V
+  #315 = Methodref          #310.#316     // com/github/statemachine/StateMachineImpl$Flow.access$3:(Lcom/github/statemachine/StateMachineImpl$Flow;Ljava/lang/String;)V
+  #316 = NameAndType        #317:#318     // access$3:(Lcom/github/statemachine/StateMachineImpl$Flow;Ljava/lang/String;)V
+  #317 = Utf8               access$3
+  #318 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;Ljava/lang/String;)V
+  #319 = Methodref          #310.#320     // com/github/statemachine/StateMachineImpl$Flow.access$4:(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+  #320 = NameAndType        #321:#314     // access$4:(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+  #321 = Utf8               access$4
+  #322 = Methodref          #310.#323     // com/github/statemachine/StateMachineImpl$Flow.access$1:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+  #323 = NameAndType        #324:#325     // access$1:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+  #324 = Utf8               access$1
+  #325 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+  #326 = Methodref          #1.#327       // com/github/statemachine/StateMachineImpl.pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+  #327 = NameAndType        #328:#329     // pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+  #328 = Utf8               pushNextState
+  #329 = Utf8               (Ljava/lang/String;Lcom/github/statemachine/State;)V
+  #330 = Fieldref           #259.#331     // com/github/statemachine/StateMachineStatistics.totalStartedFlows:I
+  #331 = NameAndType        #332:#333     // totalStartedFlows:I
+  #332 = Utf8               totalStartedFlows
+  #333 = Utf8               I
+  #334 = String             #335          // Started flow
+  #335 = Utf8               Started flow
+  #336 = String             #337          // Timed out while trying to start flow
+  #337 = Utf8               Timed out while trying to start flow
+  #338 = Utf8               flowId
+  #339 = Utf8               flow
+  #340 = Utf8               Lcom/github/statemachine/StateMachineImpl$Flow;
+  #341 = Class              #342          // java/lang/String
+  #342 = Utf8               java/lang/String
+  #343 = Utf8               stopFlow
+  #344 = Utf8               (Ljava/lang/String;)Z
+  #345 = Methodref          #1.#346       // com/github/statemachine/StateMachineImpl.lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+  #346 = NameAndType        #347:#348     // lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+  #347 = Utf8               lookupFlow
+  #348 = Utf8               (Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+  #349 = String             #350          // Stopping flow with
+  #350 = Utf8               Stopping flow with
+  #351 = Fieldref           #310.#352     // com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+  #352 = NameAndType        #353:#354     // flowStats:Lcom/github/statemachine/FlowStatistics;
+  #353 = Utf8               flowStats
+  #354 = Utf8               Lcom/github/statemachine/FlowStatistics;
+  #355 = Methodref          #310.#356     // com/github/statemachine/StateMachineImpl$Flow.access$0:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/Stack;
+  #356 = NameAndType        #357:#358     // access$0:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/Stack;
+  #357 = Utf8               access$0
+  #358 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/Stack;
+  #359 = Methodref          #360.#362     // java/util/Stack.clear:()V
+  #360 = Class              #361          // java/util/Stack
+  #361 = Utf8               java/util/Stack
+  #362 = NameAndType        #363:#47      // clear:()V
+  #363 = Utf8               clear
+  #364 = InterfaceMethodref #211.#365     // java/util/concurrent/ConcurrentMap.remove:(Ljava/lang/Object;)Ljava/lang/Object;
+  #365 = NameAndType        #366:#367     // remove:(Ljava/lang/Object;)Ljava/lang/Object;
+  #366 = Utf8               remove
+  #367 = Utf8               (Ljava/lang/Object;)Ljava/lang/Object;
+  #368 = Fieldref           #259.#369     // com/github/statemachine/StateMachineStatistics.totalStoppedFlows:I
+  #369 = NameAndType        #370:#333     // totalStoppedFlows:I
+  #370 = Utf8               totalStoppedFlows
+  #371 = String             #372          // Stopped flow
+  #372 = Utf8               Stopped flow
+  #373 = String             #374          // Timed out while trying to shutdown flow
+  #374 = Utf8               Timed out while trying to shutdown flow
+  #375 = Utf8               success
+  #376 = Utf8               getId
+  #377 = Utf8               getConfiguration
+  #378 = Utf8               ()Lcom/github/statemachine/StateMachineConfiguration;
+  #379 = Utf8               getStatistics
+  #380 = Utf8               ()Lcom/github/statemachine/StateMachineStatistics;
+  #381 = Utf8               demolish
+  #382 = Methodref          #100.#383     // java/util/concurrent/atomic/AtomicBoolean.get:()Z
+  #383 = NameAndType        #384:#154     // get:()Z
+  #384 = Utf8               get
+  #385 = String             #386          // State machine is already demolished
+  #386 = Utf8               State machine is already demolished
+  #387 = String             #388          // Demolishing state machine
+  #388 = Utf8               Demolishing state machine
+  #389 = Methodref          #249.#390     // com/github/statemachine/StateMachineImpl$FlowPurger.interrupt:()V
+  #390 = NameAndType        #391:#47      // interrupt:()V
+  #391 = Utf8               interrupt
+  #392 = Methodref          #249.#393     // com/github/statemachine/StateMachineImpl$FlowPurger.join:()V
+  #393 = NameAndType        #394:#47      // join:()V
+  #394 = Utf8               join
+  #395 = InterfaceMethodref #211.#396     // java/util/concurrent/ConcurrentMap.values:()Ljava/util/Collection;
+  #396 = NameAndType        #397:#398     // values:()Ljava/util/Collection;
+  #397 = Utf8               values
+  #398 = Utf8               ()Ljava/util/Collection;
+  #399 = InterfaceMethodref #400.#196     // java/util/Collection.iterator:()Ljava/util/Iterator;
+  #400 = Class              #401          // java/util/Collection
+  #401 = Utf8               java/util/Collection
+  #402 = Methodref          #1.#403       // com/github/statemachine/StateMachineImpl.stopFlow:(Ljava/lang/String;)Z
+  #403 = NameAndType        #343:#344     // stopFlow:(Ljava/lang/String;)Z
+  #404 = Methodref          #259.#96      // com/github/statemachine/StateMachineStatistics.toString:()Ljava/lang/String;
+  #405 = InterfaceMethodref #211.#362     // java/util/concurrent/ConcurrentMap.clear:()V
+  #406 = Methodref          #270.#407     // com/github/statemachine/StateMachineRegistry.unregister:(Ljava/lang/String;)V
+  #407 = NameAndType        #408:#228     // unregister:(Ljava/lang/String;)V
+  #408 = Utf8               unregister
+  #409 = String             #410          // Successfully shut down state machine
+  #410 = Utf8               Successfully shut down state machine
+  #411 = String             #412          // Timed out while trying to shutdown state machine
+  #412 = Utf8               Timed out while trying to shutdown state machine
+  #413 = Utf8               transitionTo
+  #414 = Utf8               (Ljava/lang/String;Lcom/github/statemachine/State;)Z
+  #415 = Methodref          #310.#416     // com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #416 = NameAndType        #417:#418     // access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #417 = Utf8               access$5
+  #418 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+  #419 = Methodref          #1.#420       // com/github/statemachine/StateMachineImpl.readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+  #420 = NameAndType        #421:#422     // readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+  #421 = Utf8               readCurrentState
+  #422 = Utf8               (Ljava/lang/String;)Lcom/github/statemachine/State;
+  #423 = String             #424          // Invalid transition between null states: %s->%s
+  #424 = Utf8               Invalid transition between null states: %s->%s
+  #425 = Methodref          #341.#426     // java/lang/String.format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+  #426 = NameAndType        #427:#428     // format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+  #427 = Utf8               format
+  #428 = Utf8               (Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+  #429 = Methodref          #1.#430       // com/github/statemachine/StateMachineImpl.logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #430 = NameAndType        #431:#150     // logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #431 = Utf8               logError
+  #432 = Methodref          #63.#433      // com/github/statemachine/State.equals:(Ljava/lang/Object;)Z
+  #433 = NameAndType        #434:#435     // equals:(Ljava/lang/Object;)Z
+  #434 = Utf8               equals
+  #435 = Utf8               (Ljava/lang/Object;)Z
+  #436 = String             #437          // Invalid transition between same state: %s->%s
+  #437 = Utf8               Invalid transition between same state: %s->%s
+  #438 = Methodref          #1.#439       // com/github/statemachine/StateMachineImpl.popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+  #439 = NameAndType        #440:#422     // popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+  #440 = Utf8               popState
+  #441 = Methodref          #1.#442       // com/github/statemachine/StateMachineImpl.isForwardTransition:(Lcom/github/statemachine/State;Lcom/github/statemachine/State;)Z
+  #442 = NameAndType        #443:#444     // isForwardTransition:(Lcom/github/statemachine/State;Lcom/github/statemachine/State;)Z
+  #443 = Utf8               isForwardTransition
+  #444 = Utf8               (Lcom/github/statemachine/State;Lcom/github/statemachine/State;)Z
+  #445 = Methodref          #1.#446       // com/github/statemachine/StateMachineImpl.transitionTo:(Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+  #446 = NameAndType        #413:#447     // transitionTo:(Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+  #447 = Utf8               (Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+  #448 = String             #449          // Successfully transitioned from %s->%s
+  #449 = Utf8               Successfully transitioned from %s->%s
+  #450 = Methodref          #63.#451      // com/github/statemachine/State.getName:()Ljava/lang/String;
+  #451 = NameAndType        #452:#54      // getName:()Ljava/lang/String;
+  #452 = Utf8               getName
+  #453 = Methodref          #310.#454     // com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+  #454 = NameAndType        #455:#456     // access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+  #455 = Utf8               access$6
+  #456 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+  #457 = Fieldref           #458.#460     // com/github/statemachine/FlowStatistics.transitionFailures:I
+  #458 = Class              #459          // com/github/statemachine/FlowStatistics
+  #459 = Utf8               com/github/statemachine/FlowStatistics
+  #460 = NameAndType        #461:#333     // transitionFailures:I
+  #461 = Utf8               transitionFailures
+  #462 = Methodref          #1.#463       // com/github/statemachine/StateMachineImpl.resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+  #463 = NameAndType        #464:#228     // resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+  #464 = Utf8               resetMachineToInitOnTransitionFailure
+  #465 = Fieldref           #458.#466     // com/github/statemachine/FlowStatistics.transitionSuccesses:I
+  #466 = NameAndType        #467:#333     // transitionSuccesses:I
+  #467 = Utf8               transitionSuccesses
+  #468 = String             #469          // Timed out while trying to transition state machine
+  #469 = Utf8               Timed out while trying to transition state machine
+  #470 = Utf8               nextState
+  #471 = Utf8               currentState
+  #472 = Utf8               rewind
+  #473 = Utf8               (Ljava/lang/String;Lcom/github/statemachine/RewindMode;)Z
+  #474 = Methodref          #1.#475       // com/github/statemachine/StateMachineImpl.$SWITCH_TABLE$com$github$statemachine$RewindMode:()[I
+  #475 = NameAndType        #44:#476      // $SWITCH_TABLE$com$github$statemachine$RewindMode:()[I
+  #476 = Utf8               ()[I
+  #477 = Methodref          #478.#480     // com/github/statemachine/RewindMode.ordinal:()I
+  #478 = Class              #479          // com/github/statemachine/RewindMode
+  #479 = Utf8               com/github/statemachine/RewindMode
+  #480 = NameAndType        #481:#482     // ordinal:()I
+  #481 = Utf8               ordinal
+  #482 = Utf8               ()I
+  #483 = Fieldref           #167.#484     // com/github/statemachine/StateMachineException$Code.REWIND_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+  #484 = NameAndType        #485:#171     // REWIND_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+  #485 = Utf8               REWIND_FAILURE
+  #486 = String             #487          // Timed out while trying to rewind state machine
+  #487 = Utf8               Timed out while trying to rewind state machine
+  #488 = Utf8               mode
+  #489 = Utf8               Lcom/github/statemachine/RewindMode;
+  #490 = Utf8               previousState
+  #491 = Methodref          #310.#492     // com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #492 = NameAndType        #493:#494     // access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #493 = Utf8               access$7
+  #494 = Utf8               (Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+  #495 = Methodref          #496.#163     // java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+  #496 = Class              #497          // java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock
+  #497 = Utf8               java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock
+  #498 = Methodref          #360.#499     // java/util/Stack.peek:()Ljava/lang/Object;
+  #499 = NameAndType        #500:#204     // peek:()Ljava/lang/Object;
+  #500 = Utf8               peek
+  #501 = Methodref          #496.#280     // java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+  #502 = String             #503          // Timed out while trying to read current state
+  #503 = Utf8               Timed out while trying to read current state
+  #504 = Class              #505          // java/util/EmptyStackException
+  #505 = Utf8               java/util/EmptyStackException
+  #506 = Utf8               findTranstionFunctor
+  #507 = Utf8               (Ljava/lang/String;)Lcom/github/statemachine/TransitionFunctor;
+  #508 = InterfaceMethodref #211.#509     // java/util/concurrent/ConcurrentMap.get:(Ljava/lang/Object;)Ljava/lang/Object;
+  #509 = NameAndType        #384:#367     // get:(Ljava/lang/Object;)Ljava/lang/Object;
+  #510 = Utf8               transitionId
+  #511 = Utf8               printStateTransitionRoute
+  #512 = Utf8               (Ljava/lang/String;)Ljava/lang/String;
+  #513 = Fieldref           #458.#514     // com/github/statemachine/FlowStatistics.boundedStateRoute:Ljava/util/Deque;
+  #514 = NameAndType        #515:#516     // boundedStateRoute:Ljava/util/Deque;
+  #515 = Utf8               boundedStateRoute
+  #516 = Utf8               Ljava/util/Deque;
+  #517 = Methodref          #3.#96        // java/lang/Object.toString:()Ljava/lang/String;
+  #518 = String             #519          // Timed out while trying to print state transition route
+  #519 = Utf8               Timed out while trying to print state transition route
+  #520 = Utf8               route
+  #521 = Methodref          #1.#522       // com/github/statemachine/StateMachineImpl.transitionId:(Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Ljava/lang/String;
+  #522 = NameAndType        #510:#523     // transitionId:(Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Ljava/lang/String;
+  #523 = Utf8               (Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Ljava/lang/String;
+  #524 = Methodref          #205.#525     // com/github/statemachine/TransitionFunctor.getFromState:()Lcom/github/statemachine/State;
+  #525 = NameAndType        #526:#527     // getFromState:()Lcom/github/statemachine/State;
+  #526 = Utf8               getFromState
+  #527 = Utf8               ()Lcom/github/statemachine/State;
+  #528 = Methodref          #205.#529     // com/github/statemachine/TransitionFunctor.progress:()Lcom/github/statemachine/TransitionResult;
+  #529 = NameAndType        #530:#531     // progress:()Lcom/github/statemachine/TransitionResult;
+  #530 = Utf8               progress
+  #531 = Utf8               ()Lcom/github/statemachine/TransitionResult;
+  #532 = Methodref          #205.#533     // com/github/statemachine/TransitionFunctor.regress:()Lcom/github/statemachine/TransitionResult;
+  #533 = NameAndType        #534:#531     // regress:()Lcom/github/statemachine/TransitionResult;
+  #534 = Utf8               regress
+  #535 = Methodref          #536.#538     // com/github/statemachine/TransitionResult.isSuccessful:()Z
+  #536 = Class              #537          // com/github/statemachine/TransitionResult
+  #537 = Utf8               com/github/statemachine/TransitionResult
+  #538 = NameAndType        #539:#154     // isSuccessful:()Z
+  #539 = Utf8               isSuccessful
+  #540 = String             #541          // Failed to transition from %s to %s, %s
+  #541 = Utf8               Failed to transition from %s to %s, %s
+  #542 = String             #543          // Failed to lookup transition functor for state transition from %s to %s
+  #543 = Utf8               Failed to lookup transition functor for state transition from %s to %s
+  #544 = Utf8               fromState
+  #545 = Utf8               toState
+  #546 = Utf8               rewinding
+  #547 = Utf8               result
+  #548 = Utf8               Lcom/github/statemachine/TransitionResult;
+  #549 = Methodref          #63.#550      // com/github/statemachine/State.getId:()Ljava/lang/String;
+  #550 = NameAndType        #376:#54      // getId:()Ljava/lang/String;
+  #551 = Methodref          #341.#552     // java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+  #552 = NameAndType        #553:#554     // valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+  #553 = Utf8               valueOf
+  #554 = Utf8               (Ljava/lang/Object;)Ljava/lang/String;
+  #555 = Methodref          #222.#556     // java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #556 = NameAndType        #231:#557     // append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #557 = Utf8               (Ljava/lang/String;)Ljava/lang/StringBuilder;
+  #558 = Utf8               forward
+  #559 = String             #560          // Timed out while trying to reset state machine
+  #560 = Utf8               Timed out while trying to reset state machine
+  #561 = Methodref          #360.#562     // java/util/Stack.pop:()Ljava/lang/Object;
+  #562 = NameAndType        #563:#204     // pop:()Ljava/lang/Object;
+  #563 = Utf8               pop
+  #564 = String             #565          // stateFlowStack is empty, popState() has nothing to return
+  #565 = Utf8               stateFlowStack is empty, popState() has nothing to return
+  #566 = Methodref          #1.#567       // com/github/statemachine/StateMachineImpl.logWarning:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #567 = NameAndType        #568:#150     // logWarning:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #568 = Utf8               logWarning
+  #569 = String             #570          // Timed out while trying to pop state
+  #570 = Utf8               Timed out while trying to pop state
+  #571 = Utf8               stackIsEmpty
+  #572 = Utf8               Ljava/util/EmptyStackException;
+  #573 = Methodref          #360.#574     // java/util/Stack.push:(Ljava/lang/Object;)Ljava/lang/Object;
+  #574 = NameAndType        #575:#367     // push:(Ljava/lang/Object;)Ljava/lang/Object;
+  #575 = Utf8               push
+  #576 = String             #577          // Timed out while trying to push next state
+  #577 = Utf8               Timed out while trying to push next state
+  #578 = Fieldref           #167.#579     // com/github/statemachine/StateMachineException$Code.MACHINE_NOT_ALIVE:Lcom/github/statemachine/StateMachineException$Code;
+  #579 = NameAndType        #580:#171     // MACHINE_NOT_ALIVE:Lcom/github/statemachine/StateMachineException$Code;
+  #580 = Utf8               MACHINE_NOT_ALIVE
+  #581 = String             #582          // State machine id:
+  #582 = Utf8               State machine id:
+  #583 = String             #584          //  is not alive
+  #584 = Utf8                is not alive
+  #585 = Methodref          #1.#586       // com/github/statemachine/StateMachineImpl.findTranstionFunctor:(Ljava/lang/String;)Lcom/github/statemachine/TransitionFunctor;
+  #586 = NameAndType        #506:#507     // findTranstionFunctor:(Ljava/lang/String;)Lcom/github/statemachine/TransitionFunctor;
+  #587 = Methodref          #341.#433     // java/lang/String.equals:(Ljava/lang/Object;)Z
+  #588 = Fieldref           #167.#589     // com/github/statemachine/StateMachineException$Code.ILLEGAL_TRANSITION:Lcom/github/statemachine/StateMachineException$Code;
+  #589 = NameAndType        #590:#171     // ILLEGAL_TRANSITION:Lcom/github/statemachine/StateMachineException$Code;
+  #590 = Utf8               ILLEGAL_TRANSITION
+  #591 = Utf8               stateOne
+  #592 = Utf8               stateTwo
+  #593 = Fieldref           #167.#594     // com/github/statemachine/StateMachineException$Code.ILLEGAL_FLOW_ID:Lcom/github/statemachine/StateMachineException$Code;
+  #594 = NameAndType        #595:#171     // ILLEGAL_FLOW_ID:Lcom/github/statemachine/StateMachineException$Code;
+  #595 = Utf8               ILLEGAL_FLOW_ID
+  #596 = Methodref          #222.#88      // java/lang/StringBuilder."<init>":()V
+  #597 = String             #598          // [m:
+  #598 = Utf8               [m:
+  #599 = String             #600          // ][f:
+  #600 = Utf8               ][f:
+  #601 = String             #602          // ]
+  #602 = Utf8               ]
+  #603 = InterfaceMethodref #604.#606     // org/apache/logging/log4j/Logger.error:(Ljava/lang/String;)V
+  #604 = Class              #605          // org/apache/logging/log4j/Logger
+  #605 = Utf8               org/apache/logging/log4j/Logger
+  #606 = NameAndType        #607:#228     // error:(Ljava/lang/String;)V
+  #607 = Utf8               error
+  #608 = Utf8               message
+  #609 = Utf8               (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+  #610 = InterfaceMethodref #604.#611     // org/apache/logging/log4j/Logger.error:(Ljava/lang/String;Ljava/lang/Throwable;)V
+  #611 = NameAndType        #607:#612     // error:(Ljava/lang/String;Ljava/lang/Throwable;)V
+  #612 = Utf8               (Ljava/lang/String;Ljava/lang/Throwable;)V
+  #613 = Utf8               Ljava/lang/Throwable;
+  #614 = InterfaceMethodref #604.#615     // org/apache/logging/log4j/Logger.warn:(Ljava/lang/String;)V
+  #615 = NameAndType        #616:#228     // warn:(Ljava/lang/String;)V
+  #616 = Utf8               warn
+  #617 = InterfaceMethodref #604.#618     // org/apache/logging/log4j/Logger.info:(Ljava/lang/String;)V
+  #618 = NameAndType        #619:#228     // info:(Ljava/lang/String;)V
+  #619 = Utf8               info
+  #620 = Utf8               logDebug
+  #621 = InterfaceMethodref #604.#622     // org/apache/logging/log4j/Logger.isDebugEnabled:()Z
+  #622 = NameAndType        #623:#154     // isDebugEnabled:()Z
+  #623 = Utf8               isDebugEnabled
+  #624 = InterfaceMethodref #604.#625     // org/apache/logging/log4j/Logger.debug:(Ljava/lang/String;)V
+  #625 = NameAndType        #626:#228     // debug:(Ljava/lang/String;)V
+  #626 = Utf8               debug
+  #627 = Utf8               finalize
+  #628 = String             #629          // Garbage collected stopped state machine
+  #629 = Utf8               Garbage collected stopped state machine
+  #630 = Utf8               (Lcom/github/statemachine/StateMachineImpl;)Ljava/lang/String;
+  #631 = Utf8               access$2
+  #632 = Methodref          #1.#633       // com/github/statemachine/StateMachineImpl.logDebug:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #633 = NameAndType        #620:#150     // logDebug:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+  #634 = Utf8               (Lcom/github/statemachine/StateMachineImpl;)J
+  #635 = Methodref          #1.#636       // com/github/statemachine/StateMachineImpl.logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+  #636 = NameAndType        #431:#609     // logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+  #637 = Fieldref           #1.#638       // com/github/statemachine/StateMachineImpl.$SWITCH_TABLE$com$github$statemachine$RewindMode:[I
+  #638 = NameAndType        #44:#45       // $SWITCH_TABLE$com$github$statemachine$RewindMode:[I
+  #639 = Methodref          #478.#640     // com/github/statemachine/RewindMode.values:()[Lcom/github/statemachine/RewindMode;
+  #640 = NameAndType        #397:#641     // values:()[Lcom/github/statemachine/RewindMode;
+  #641 = Utf8               ()[Lcom/github/statemachine/RewindMode;
+  #642 = Fieldref           #478.#643     // com/github/statemachine/RewindMode.ALL_THE_WAY_HARD_RESET:Lcom/github/statemachine/RewindMode;
+  #643 = NameAndType        #644:#489     // ALL_THE_WAY_HARD_RESET:Lcom/github/statemachine/RewindMode;
+  #644 = Utf8               ALL_THE_WAY_HARD_RESET
+  #645 = Fieldref           #478.#646     // com/github/statemachine/RewindMode.ALL_THE_WAY_STEP_WISE:Lcom/github/statemachine/RewindMode;
+  #646 = NameAndType        #647:#489     // ALL_THE_WAY_STEP_WISE:Lcom/github/statemachine/RewindMode;
+  #647 = Utf8               ALL_THE_WAY_STEP_WISE
+  #648 = Fieldref           #478.#649     // com/github/statemachine/RewindMode.ONE_STEP:Lcom/github/statemachine/RewindMode;
+  #649 = NameAndType        #650:#489     // ONE_STEP:Lcom/github/statemachine/RewindMode;
+  #650 = Utf8               ONE_STEP
+  #651 = Class              #652          // java/lang/NoSuchFieldError
+  #652 = Utf8               java/lang/NoSuchFieldError
+  #653 = Class              #45           // "[I"
+  #654 = Utf8               SourceFile
+  #655 = Utf8               StateMachineImpl.java
+  #656 = Utf8               InnerClasses
+  #657 = Utf8               Flow
+  #658 = Utf8               FlowPurger
+  #659 = Class              #660          // java/lang/Thread$UncaughtExceptionHandler
+  #660 = Utf8               java/lang/Thread$UncaughtExceptionHandler
+  #661 = Utf8               UncaughtExceptionHandler
+  #662 = Utf8               ReadLock
+  #663 = Utf8               WriteLock
+{
+  final java.util.concurrent.ConcurrentMap<java.lang.String, com.github.statemachine.StateMachineImpl$Flow> allFlowsTable;
+    descriptor: Ljava/util/concurrent/ConcurrentMap;
+    flags: ACC_FINAL
+    Signature: #26                          // Ljava/util/concurrent/ConcurrentMap<Ljava/lang/String;Lcom/github/statemachine/StateMachineImpl$Flow;>;
+
+  public static com.github.statemachine.State notStartedState;
+    descriptor: Lcom/github/statemachine/State;
+    flags: ACC_PUBLIC, ACC_STATIC
+
+  static {};
+    descriptor: ()V
+    flags: ACC_STATIC
+    Code:
+      stack=3, locals=1, args_size=0
+         0: ldc           #1                  // class com/github/statemachine/StateMachineImpl
+         2: invokevirtual #49                 // Method java/lang/Class.getSimpleName:()Ljava/lang/String;
+         5: invokestatic  #55                 // Method org/apache/logging/log4j/LogManager.getLogger:(Ljava/lang/String;)Lorg/apache/logging/log4j/Logger;
+         8: putstatic     #61                 // Field logger:Lorg/apache/logging/log4j/Logger;
+        11: new           #63                 // class com/github/statemachine/State
+        14: dup
+        15: ldc           #65                 // String INIT
+        17: invokestatic  #67                 // Method java/util/Optional.of:(Ljava/lang/Object;)Ljava/util/Optional;
+        20: invokespecial #73                 // Method com/github/statemachine/State."<init>":(Ljava/util/Optional;)V
+        23: putstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+        26: goto          30
+        29: astore_0
+        30: return
+      Exception table:
+         from    to  target type
+            11    26    29   Class com/github/statemachine/StateMachineException
+      LineNumberTable:
+        line 54: 0
+        line 89: 11
+        line 90: 26
+        line 92: 30
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+      StackMapTable: number_of_entries = 2
+        frame_type = 93 /* same_locals_1_stack_item */
+          stack = [ class com/github/statemachine/StateMachineException ]
+        frame_type = 0 /* same */
+
+  com.github.statemachine.StateMachineImpl(com.github.statemachine.StateMachineConfiguration, java.util.List<com.github.statemachine.TransitionFunctor>) throws com.github.statemachine.StateMachineException;
+    descriptor: (Lcom/github/statemachine/StateMachineConfiguration;Ljava/util/List;)V
+    flags:
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Signature: #86                          // (Lcom/github/statemachine/StateMachineConfiguration;Ljava/util/List<Lcom/github/statemachine/TransitionFunctor;>;)V
+    Code:
+      stack=7, locals=6, args_size=3
+         0: aload_0
+         1: invokespecial #87                 // Method java/lang/Object."<init>":()V
+         4: aload_0
+         5: invokestatic  #89                 // Method java/util/UUID.randomUUID:()Ljava/util/UUID;
+         8: invokevirtual #95                 // Method java/util/UUID.toString:()Ljava/lang/String;
+        11: putfield      #98                 // Field machineId:Ljava/lang/String;
+        14: aload_0
+        15: new           #100                // class java/util/concurrent/atomic/AtomicBoolean
+        18: dup
+        19: invokespecial #102                // Method java/util/concurrent/atomic/AtomicBoolean."<init>":()V
+        22: putfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+        25: aload_0
+        26: new           #105                // class java/util/concurrent/ConcurrentHashMap
+        29: dup
+        30: invokespecial #107                // Method java/util/concurrent/ConcurrentHashMap."<init>":()V
+        33: putfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+        36: aload_0
+        37: new           #105                // class java/util/concurrent/ConcurrentHashMap
+        40: dup
+        41: invokespecial #107                // Method java/util/concurrent/ConcurrentHashMap."<init>":()V
+        44: putfield      #110                // Field allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+        47: aload_0
+        48: new           #112                // class java/util/concurrent/locks/ReentrantReadWriteLock
+        51: dup
+        52: iconst_1
+        53: invokespecial #114                // Method java/util/concurrent/locks/ReentrantReadWriteLock."<init>":(Z)V
+        56: putfield      #117                // Field machineSuperLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+        59: aload_0
+        60: aload_0
+        61: getfield      #117                // Field machineSuperLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+        64: invokevirtual #119                // Method java/util/concurrent/locks/ReentrantReadWriteLock.writeLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        67: putfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        70: aload_0
+        71: aload_0
+        72: getfield      #117                // Field machineSuperLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock;
+        75: invokevirtual #125                // Method java/util/concurrent/locks/ReentrantReadWriteLock.readLock:()Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        78: putfield      #129                // Field machineReadLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        81: aload_0
+        82: getstatic     #131                // Field java/util/concurrent/TimeUnit.MINUTES:Ljava/util/concurrent/TimeUnit;
+        85: ldc2_w        #137                // long 10l
+        88: invokevirtual #139                // Method java/util/concurrent/TimeUnit.toMillis:(J)J
+        91: putfield      #143                // Field flowExpirationMillis:J
+        94: aload_0
+        95: getfield      #98                 // Field machineId:Ljava/lang/String;
+        98: aconst_null
+        99: ldc           #145                // String Firing up state machine
+       101: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       104: aload_0
+       105: invokevirtual #151                // Method alive:()Z
+       108: ifeq          122
+       111: aload_0
+       112: getfield      #98                 // Field machineId:Ljava/lang/String;
+       115: aconst_null
+       116: ldc           #155                // String Cannot fire up an already running state machine
+       118: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       121: return
+       122: aload_0
+       123: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       126: ldc2_w        #14                 // long 100l
+       129: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+       132: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+       135: ifeq          394
+       138: aload_1
+       139: ifnonnull     153
+       142: new           #79                 // class com/github/statemachine/StateMachineException
+       145: dup
+       146: getstatic     #166                // Field com/github/statemachine/StateMachineException$Code.INVALID_CONFIG:Lcom/github/statemachine/StateMachineException$Code;
+       149: invokespecial #172                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;)V
+       152: athrow
+       153: aload_0
+       154: aload_1
+       155: putfield      #175                // Field config:Lcom/github/statemachine/StateMachineConfiguration;
+       158: aload_0
+       159: aload_1
+       160: invokevirtual #177                // Method com/github/statemachine/StateMachineConfiguration.resetMachineToInitOnFailure:()Z
+       163: putfield      #181                // Field resetMachineToInitOnFailure:Z
+       166: aload_0
+       167: aload_1
+       168: invokevirtual #183                // Method com/github/statemachine/StateMachineConfiguration.getFlowExpirationMillis:()J
+       171: putfield      #143                // Field flowExpirationMillis:J
+       174: aload_2
+       175: ifnull        187
+       178: aload_2
+       179: invokeinterface #187,  1          // InterfaceMethod java/util/List.isEmpty:()Z
+       184: ifeq          198
+       187: new           #79                 // class com/github/statemachine/StateMachineException
+       190: dup
+       191: getstatic     #192                // Field com/github/statemachine/StateMachineException$Code.INVALID_TRANSITIONS:Lcom/github/statemachine/StateMachineException$Code;
+       194: invokespecial #172                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;)V
+       197: athrow
+       198: aload_2
+       199: invokeinterface #195,  1          // InterfaceMethod java/util/List.iterator:()Ljava/util/Iterator;
+       204: astore        4
+       206: goto          254
+       209: aload         4
+       211: invokeinterface #199,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       216: checkcast     #205                // class com/github/statemachine/TransitionFunctor
+       219: astore_3
+       220: aload_3
+       221: ifnull        254
+       224: aload_0
+       225: getfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+       228: aload_3
+       229: invokevirtual #207                // Method com/github/statemachine/TransitionFunctor.getForwardId:()Ljava/lang/String;
+       232: aload_3
+       233: invokeinterface #210,  3          // InterfaceMethod java/util/concurrent/ConcurrentMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+       238: pop
+       239: aload_0
+       240: getfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+       243: aload_3
+       244: invokevirtual #216                // Method com/github/statemachine/TransitionFunctor.getReverseId:()Ljava/lang/String;
+       247: aload_3
+       248: invokeinterface #210,  3          // InterfaceMethod java/util/concurrent/ConcurrentMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+       253: pop
+       254: aload         4
+       256: invokeinterface #219,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+       261: ifne          209
+       264: aload_0
+       265: getfield      #98                 // Field machineId:Ljava/lang/String;
+       268: aconst_null
+       269: new           #222                // class java/lang/StringBuilder
+       272: dup
+       273: ldc           #224                // String Successfully hydrated stateTransitionTable:
+       275: invokespecial #226                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+       278: aload_0
+       279: getfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+       282: invokevirtual #229                // Method java/lang/StringBuilder.append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+       285: invokevirtual #233                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+       288: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       291: invokestatic  #234                // Method java/lang/Thread.currentThread:()Ljava/lang/Thread;
+       294: new           #240                // class com/github/statemachine/StateMachineImpl$1
+       297: dup
+       298: aload_0
+       299: invokespecial #242                // Method com/github/statemachine/StateMachineImpl$1."<init>":(Lcom/github/statemachine/StateMachineImpl;)V
+       302: invokevirtual #245                // Method java/lang/Thread.setUncaughtExceptionHandler:(Ljava/lang/Thread$UncaughtExceptionHandler;)V
+       305: aload_0
+       306: new           #249                // class com/github/statemachine/StateMachineImpl$FlowPurger
+       309: dup
+       310: aload_0
+       311: ldc2_w        #17                 // long 180000l
+       314: aconst_null
+       315: invokespecial #251                // Method com/github/statemachine/StateMachineImpl$FlowPurger."<init>":(Lcom/github/statemachine/StateMachineImpl;JLcom/github/statemachine/StateMachineImpl$FlowPurger;)V
+       318: putfield      #254                // Field flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+       321: aload_0
+       322: getfield      #254                // Field flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+       325: invokevirtual #256                // Method com/github/statemachine/StateMachineImpl$FlowPurger.start:()V
+       328: aload_0
+       329: new           #259                // class com/github/statemachine/StateMachineStatistics
+       332: dup
+       333: aload_0
+       334: getfield      #98                 // Field machineId:Ljava/lang/String;
+       337: invokespecial #261                // Method com/github/statemachine/StateMachineStatistics."<init>":(Ljava/lang/String;)V
+       340: putfield      #262                // Field machineStats:Lcom/github/statemachine/StateMachineStatistics;
+       343: aload_0
+       344: getfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+       347: iconst_1
+       348: invokevirtual #264                // Method java/util/concurrent/atomic/AtomicBoolean.set:(Z)V
+       351: aload_0
+       352: getfield      #98                 // Field machineId:Ljava/lang/String;
+       355: aconst_null
+       356: ldc_w         #267                // String Successfully fired up state machine
+       359: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       362: invokestatic  #269                // Method com/github/statemachine/StateMachineRegistry.getInstance:()Lcom/github/statemachine/StateMachineRegistry;
+       365: aload_0
+       366: invokevirtual #275                // Method com/github/statemachine/StateMachineRegistry.register:(Lcom/github/statemachine/StateMachine;)V
+       369: goto          384
+       372: astore        5
+       374: aload_0
+       375: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       378: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       381: aload         5
+       383: athrow
+       384: aload_0
+       385: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       388: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       391: goto          421
+       394: new           #79                 // class com/github/statemachine/StateMachineException
+       397: dup
+       398: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       401: ldc_w         #285                // String Timed out while trying to curate state machine
+       404: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       407: athrow
+       408: astore_3
+       409: new           #79                 // class com/github/statemachine/StateMachineException
+       412: dup
+       413: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       416: aload_3
+       417: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       420: athrow
+       421: return
+      Exception table:
+         from    to  target type
+           138   372   372   any
+           122   408   408   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 94: 0
+        line 56: 4
+        line 62: 14
+        line 66: 25
+        line 67: 26
+        line 70: 36
+        line 77: 47
+        line 78: 59
+        line 79: 70
+        line 82: 81
+        line 96: 94
+        line 97: 104
+        line 98: 111
+        line 99: 121
+        line 102: 122
+        line 104: 138
+        line 105: 142
+        line 107: 153
+        line 108: 158
+        line 109: 166
+        line 110: 174
+        line 111: 187
+        line 115: 198
+        line 116: 220
+        line 117: 224
+        line 118: 239
+        line 115: 254
+        line 121: 264
+        line 122: 269
+        line 121: 288
+        line 125: 291
+        line 134: 305
+        line 135: 321
+        line 137: 328
+        line 139: 343
+        line 140: 351
+        line 142: 362
+        line 143: 369
+        line 144: 374
+        line 145: 381
+        line 144: 384
+        line 146: 391
+        line 147: 394
+        line 148: 401
+        line 147: 404
+        line 150: 408
+        line 151: 409
+        line 153: 421
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     422     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0     422     1 config   Lcom/github/statemachine/StateMachineConfiguration;
+            0     422     2 transitionFunctors   Ljava/util/List;
+          220      34     3 transitionFunctor   Lcom/github/statemachine/TransitionFunctor;
+          409      12     3 exception   Ljava/lang/InterruptedException;
+      LocalVariableTypeTable:
+        Start  Length  Slot  Name   Signature
+            0     422     2 transitionFunctors   Ljava/util/List<Lcom/github/statemachine/TransitionFunctor;>;
+      StackMapTable: number_of_entries = 11
+        frame_type = 255 /* full_frame */
+          offset_delta = 122
+          locals = [ class com/github/statemachine/StateMachineImpl, class com/github/statemachine/StateMachineConfiguration, class java/util/List ]
+          stack = []
+        frame_type = 30 /* same */
+        frame_type = 33 /* same */
+        frame_type = 10 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 10
+          locals = [ class com/github/statemachine/StateMachineImpl, class com/github/statemachine/StateMachineConfiguration, class java/util/List, top, class java/util/Iterator ]
+          stack = []
+        frame_type = 44 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 117
+          locals = [ class com/github/statemachine/StateMachineImpl, class com/github/statemachine/StateMachineConfiguration, class java/util/List ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 11 /* same */
+        frame_type = 9 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 12 /* same */
+
+  public java.lang.String startFlow() throws com.github.statemachine.StateMachineException;
+    descriptor: ()Ljava/lang/String;
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=4, locals=4, args_size=1
+         0: aconst_null
+         1: astore_1
+         2: aload_0
+         3: invokespecial #308                // Method machineAlive:()V
+         6: aload_0
+         7: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        10: ldc2_w        #14                 // long 100l
+        13: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        16: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        19: ifeq          115
+        22: new           #310                // class com/github/statemachine/StateMachineImpl$Flow
+        25: dup
+        26: aconst_null
+        27: invokespecial #312                // Method com/github/statemachine/StateMachineImpl$Flow."<init>":(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+        30: astore_2
+        31: aload_2
+        32: aload_0
+        33: getfield      #98                 // Field machineId:Ljava/lang/String;
+        36: invokestatic  #315                // Method com/github/statemachine/StateMachineImpl$Flow.access$3:(Lcom/github/statemachine/StateMachineImpl$Flow;Ljava/lang/String;)V
+        39: aload_2
+        40: invokestatic  #319                // Method com/github/statemachine/StateMachineImpl$Flow.access$4:(Lcom/github/statemachine/StateMachineImpl$Flow;)V
+        43: aload_2
+        44: invokestatic  #322                // Method com/github/statemachine/StateMachineImpl$Flow.access$1:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+        47: astore_1
+        48: aload_0
+        49: getfield      #110                // Field allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+        52: aload_1
+        53: aload_2
+        54: invokeinterface #210,  3          // InterfaceMethod java/util/concurrent/ConcurrentMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+        59: pop
+        60: aload_0
+        61: aload_1
+        62: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+        65: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+        68: aload_0
+        69: getfield      #262                // Field machineStats:Lcom/github/statemachine/StateMachineStatistics;
+        72: dup
+        73: getfield      #330                // Field com/github/statemachine/StateMachineStatistics.totalStartedFlows:I
+        76: iconst_1
+        77: iadd
+        78: putfield      #330                // Field com/github/statemachine/StateMachineStatistics.totalStartedFlows:I
+        81: aload_0
+        82: getfield      #98                 // Field machineId:Ljava/lang/String;
+        85: aload_1
+        86: ldc_w         #334                // String Started flow
+        89: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        92: goto          105
+        95: astore_3
+        96: aload_0
+        97: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       100: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       103: aload_3
+       104: athrow
+       105: aload_0
+       106: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       109: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       112: goto          142
+       115: new           #79                 // class com/github/statemachine/StateMachineException
+       118: dup
+       119: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       122: ldc_w         #336                // String Timed out while trying to start flow
+       125: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       128: athrow
+       129: astore_2
+       130: new           #79                 // class com/github/statemachine/StateMachineException
+       133: dup
+       134: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       137: aload_2
+       138: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       141: athrow
+       142: aload_1
+       143: areturn
+      Exception table:
+         from    to  target type
+            22    95    95   any
+             6   129   129   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 157: 0
+        line 158: 2
+        line 160: 6
+        line 163: 22
+        line 164: 31
+        line 165: 39
+        line 166: 43
+        line 167: 48
+        line 168: 60
+        line 169: 68
+        line 170: 81
+        line 171: 92
+        line 172: 96
+        line 173: 103
+        line 172: 105
+        line 174: 112
+        line 175: 115
+        line 176: 122
+        line 175: 125
+        line 178: 129
+        line 179: 130
+        line 181: 142
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     144     0  this   Lcom/github/statemachine/StateMachineImpl;
+            2     142     1 flowId   Ljava/lang/String;
+           31      61     2  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+          130      12     2 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 5
+        frame_type = 255 /* full_frame */
+          offset_delta = 95
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 9 /* same */
+        frame_type = 9 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 12 /* same */
+
+  public boolean stopFlow(java.lang.String) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;)Z
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=5, locals=5, args_size=2
+         0: iconst_0
+         1: istore_2
+         2: aload_0
+         3: invokespecial #308                // Method machineAlive:()V
+         6: aload_0
+         7: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        10: ldc2_w        #14                 // long 100l
+        13: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        16: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        19: ifeq          128
+        22: aload_0
+        23: aload_1
+        24: invokespecial #345                // Method lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+        27: astore_3
+        28: aload_0
+        29: getfield      #98                 // Field machineId:Ljava/lang/String;
+        32: aload_1
+        33: new           #222                // class java/lang/StringBuilder
+        36: dup
+        37: ldc_w         #349                // String Stopping flow with
+        40: invokespecial #226                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+        43: aload_3
+        44: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+        47: invokevirtual #229                // Method java/lang/StringBuilder.append:(Ljava/lang/Object;)Ljava/lang/StringBuilder;
+        50: invokevirtual #233                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+        53: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        56: aload_3
+        57: invokestatic  #355                // Method com/github/statemachine/StateMachineImpl$Flow.access$0:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/Stack;
+        60: invokevirtual #359                // Method java/util/Stack.clear:()V
+        63: aload_0
+        64: getfield      #110                // Field allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+        67: aload_3
+        68: invokestatic  #322                // Method com/github/statemachine/StateMachineImpl$Flow.access$1:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+        71: invokeinterface #364,  2          // InterfaceMethod java/util/concurrent/ConcurrentMap.remove:(Ljava/lang/Object;)Ljava/lang/Object;
+        76: pop
+        77: iconst_1
+        78: istore_2
+        79: aload_0
+        80: getfield      #262                // Field machineStats:Lcom/github/statemachine/StateMachineStatistics;
+        83: dup
+        84: getfield      #368                // Field com/github/statemachine/StateMachineStatistics.totalStoppedFlows:I
+        87: iconst_1
+        88: iadd
+        89: putfield      #368                // Field com/github/statemachine/StateMachineStatistics.totalStoppedFlows:I
+        92: aload_0
+        93: getfield      #98                 // Field machineId:Ljava/lang/String;
+        96: aload_1
+        97: ldc_w         #371                // String Stopped flow
+       100: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       103: goto          118
+       106: astore        4
+       108: aload_0
+       109: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       112: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       115: aload         4
+       117: athrow
+       118: aload_0
+       119: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       122: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       125: goto          155
+       128: new           #79                 // class com/github/statemachine/StateMachineException
+       131: dup
+       132: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       135: ldc_w         #373                // String Timed out while trying to shutdown flow
+       138: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       141: athrow
+       142: astore_3
+       143: new           #79                 // class com/github/statemachine/StateMachineException
+       146: dup
+       147: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       150: aload_3
+       151: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       154: athrow
+       155: iload_2
+       156: ireturn
+      Exception table:
+         from    to  target type
+            22   106   106   any
+             6   142   142   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 186: 0
+        line 187: 2
+        line 189: 6
+        line 191: 22
+        line 192: 28
+        line 193: 56
+        line 194: 63
+        line 195: 77
+        line 196: 79
+        line 197: 92
+        line 198: 103
+        line 199: 108
+        line 200: 115
+        line 199: 118
+        line 201: 125
+        line 202: 128
+        line 203: 135
+        line 202: 138
+        line 205: 142
+        line 206: 143
+        line 208: 155
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     157     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0     157     1 flowId   Ljava/lang/String;
+            2     155     2 success   Z
+           28      75     3  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+          143      12     3 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 5
+        frame_type = 255 /* full_frame */
+          offset_delta = 106
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, int ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 11 /* same */
+        frame_type = 9 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 12 /* same */
+
+  public java.lang.String getId();
+    descriptor: ()Ljava/lang/String;
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #98                 // Field machineId:Ljava/lang/String;
+         4: areturn
+      LineNumberTable:
+        line 213: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   Lcom/github/statemachine/StateMachineImpl;
+
+  public com.github.statemachine.StateMachineConfiguration getConfiguration();
+    descriptor: ()Lcom/github/statemachine/StateMachineConfiguration;
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #175                // Field config:Lcom/github/statemachine/StateMachineConfiguration;
+         4: areturn
+      LineNumberTable:
+        line 218: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   Lcom/github/statemachine/StateMachineImpl;
+
+  public com.github.statemachine.StateMachineStatistics getStatistics();
+    descriptor: ()Lcom/github/statemachine/StateMachineStatistics;
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #262                // Field machineStats:Lcom/github/statemachine/StateMachineStatistics;
+         4: areturn
+      LineNumberTable:
+        line 223: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       5     0  this   Lcom/github/statemachine/StateMachineImpl;
+
+  public boolean demolish() throws com.github.statemachine.StateMachineException;
+    descriptor: ()Z
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=4, locals=5, args_size=1
+         0: iconst_0
+         1: istore_1
+         2: aload_0
+         3: getfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+         6: ifnull        32
+         9: aload_0
+        10: getfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+        13: invokevirtual #382                // Method java/util/concurrent/atomic/AtomicBoolean.get:()Z
+        16: ifne          32
+        19: aload_0
+        20: getfield      #98                 // Field machineId:Ljava/lang/String;
+        23: aconst_null
+        24: ldc_w         #385                // String State machine is already demolished
+        27: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        30: iconst_1
+        31: ireturn
+        32: aload_0
+        33: getfield      #98                 // Field machineId:Ljava/lang/String;
+        36: aconst_null
+        37: ldc_w         #387                // String Demolishing state machine
+        40: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        43: aload_0
+        44: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        47: ldc2_w        #14                 // long 100l
+        50: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        53: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        56: ifeq          204
+        59: aload_0
+        60: getfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+        63: iconst_0
+        64: invokevirtual #264                // Method java/util/concurrent/atomic/AtomicBoolean.set:(Z)V
+        67: aload_0
+        68: getfield      #254                // Field flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+        71: invokevirtual #389                // Method com/github/statemachine/StateMachineImpl$FlowPurger.interrupt:()V
+        74: aload_0
+        75: getfield      #254                // Field flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+        78: invokevirtual #392                // Method com/github/statemachine/StateMachineImpl$FlowPurger.join:()V
+        81: aload_0
+        82: aconst_null
+        83: putfield      #254                // Field flowPurgerDaemon:Lcom/github/statemachine/StateMachineImpl$FlowPurger;
+        86: aload_0
+        87: getfield      #110                // Field allFlowsTable:Ljava/util/concurrent/ConcurrentMap;
+        90: invokeinterface #395,  1          // InterfaceMethod java/util/concurrent/ConcurrentMap.values:()Ljava/util/Collection;
+        95: invokeinterface #399,  1          // InterfaceMethod java/util/Collection.iterator:()Ljava/util/Iterator;
+       100: astore_3
+       101: goto          123
+       104: aload_3
+       105: invokeinterface #199,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+       110: checkcast     #310                // class com/github/statemachine/StateMachineImpl$Flow
+       113: astore_2
+       114: aload_0
+       115: aload_2
+       116: invokestatic  #322                // Method com/github/statemachine/StateMachineImpl$Flow.access$1:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/lang/String;
+       119: invokevirtual #402                // Method stopFlow:(Ljava/lang/String;)Z
+       122: pop
+       123: aload_3
+       124: invokeinterface #219,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+       129: ifne          104
+       132: aload_0
+       133: getfield      #98                 // Field machineId:Ljava/lang/String;
+       136: aconst_null
+       137: aload_0
+       138: getfield      #262                // Field machineStats:Lcom/github/statemachine/StateMachineStatistics;
+       141: invokevirtual #404                // Method com/github/statemachine/StateMachineStatistics.toString:()Ljava/lang/String;
+       144: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       147: aload_0
+       148: getfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+       151: invokeinterface #405,  1          // InterfaceMethod java/util/concurrent/ConcurrentMap.clear:()V
+       156: invokestatic  #269                // Method com/github/statemachine/StateMachineRegistry.getInstance:()Lcom/github/statemachine/StateMachineRegistry;
+       159: aload_0
+       160: getfield      #98                 // Field machineId:Ljava/lang/String;
+       163: invokevirtual #406                // Method com/github/statemachine/StateMachineRegistry.unregister:(Ljava/lang/String;)V
+       166: aload_0
+       167: getfield      #98                 // Field machineId:Ljava/lang/String;
+       170: aconst_null
+       171: ldc_w         #409                // String Successfully shut down state machine
+       174: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       177: iconst_1
+       178: istore_1
+       179: goto          194
+       182: astore        4
+       184: aload_0
+       185: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       188: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       191: aload         4
+       193: athrow
+       194: aload_0
+       195: getfield      #123                // Field machineWriteLock:Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       198: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       201: goto          231
+       204: new           #79                 // class com/github/statemachine/StateMachineException
+       207: dup
+       208: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       211: ldc_w         #411                // String Timed out while trying to shutdown state machine
+       214: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       217: athrow
+       218: astore_2
+       219: new           #79                 // class com/github/statemachine/StateMachineException
+       222: dup
+       223: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       226: aload_2
+       227: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       230: athrow
+       231: iload_1
+       232: ireturn
+      Exception table:
+         from    to  target type
+            67   182   182   any
+            43   218   218   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 228: 0
+        line 229: 2
+        line 230: 19
+        line 231: 30
+        line 233: 32
+        line 235: 43
+        line 237: 59
+        line 240: 67
+        line 241: 74
+        line 242: 81
+        line 245: 86
+        line 246: 114
+        line 245: 123
+        line 250: 132
+        line 253: 147
+        line 256: 156
+        line 258: 166
+        line 259: 177
+        line 260: 179
+        line 261: 184
+        line 262: 191
+        line 261: 194
+        line 263: 201
+        line 264: 204
+        line 265: 211
+        line 264: 214
+        line 267: 218
+        line 268: 219
+        line 270: 231
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     233     0  this   Lcom/github/statemachine/StateMachineImpl;
+            2     231     1 success   Z
+          114       9     2  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+          219      12     2 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 8
+        frame_type = 252 /* append */
+          offset_delta = 32
+          locals = [ int ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 71
+          locals = [ class com/github/statemachine/StateMachineImpl, int, top, class java/util/Iterator ]
+          stack = []
+        frame_type = 18 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 58
+          locals = [ class com/github/statemachine/StateMachineImpl, int ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 11 /* same */
+        frame_type = 9 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 12 /* same */
+
+  public boolean transitionTo(java.lang.String, com.github.statemachine.State) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;Lcom/github/statemachine/State;)Z
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=7, locals=10, args_size=3
+         0: iconst_0
+         1: istore_3
+         2: aload_0
+         3: invokespecial #308                // Method machineAlive:()V
+         6: aload_0
+         7: aload_1
+         8: invokespecial #345                // Method lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+        11: astore        4
+        13: aload         4
+        15: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        18: ldc2_w        #14                 // long 100l
+        21: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        24: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        27: ifeq          389
+        30: aload_0
+        31: aload_1
+        32: invokevirtual #419                // Method readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+        35: astore        5
+        37: aload         5
+        39: ifnull        46
+        42: aload_2
+        43: ifnonnull     87
+        46: aload_0
+        47: getfield      #98                 // Field machineId:Ljava/lang/String;
+        50: aload_1
+        51: ldc_w         #423                // String Invalid transition between null states: %s->%s
+        54: iconst_2
+        55: anewarray     #3                  // class java/lang/Object
+        58: dup
+        59: iconst_0
+        60: aload         5
+        62: aastore
+        63: dup
+        64: iconst_1
+        65: aload_2
+        66: aastore
+        67: invokestatic  #425                // Method java/lang/String.format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+        70: invokestatic  #429                // Method logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        73: iload_3
+        74: istore        9
+        76: aload         4
+        78: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        81: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+        84: iload         9
+        86: ireturn
+        87: aload         5
+        89: ifnull        105
+        92: aload_2
+        93: ifnull        105
+        96: aload         5
+        98: aload_2
+        99: invokevirtual #432                // Method com/github/statemachine/State.equals:(Ljava/lang/Object;)Z
+       102: ifeq          146
+       105: aload_0
+       106: getfield      #98                 // Field machineId:Ljava/lang/String;
+       109: aload_1
+       110: ldc_w         #436                // String Invalid transition between same state: %s->%s
+       113: iconst_2
+       114: anewarray     #3                  // class java/lang/Object
+       117: dup
+       118: iconst_0
+       119: aload         5
+       121: aastore
+       122: dup
+       123: iconst_1
+       124: aload_2
+       125: aastore
+       126: invokestatic  #425                // Method java/lang/String.format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+       129: invokestatic  #429                // Method logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       132: iload_3
+       133: istore        9
+       135: aload         4
+       137: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       140: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       143: iload         9
+       145: ireturn
+       146: aload_0
+       147: aload_1
+       148: invokespecial #438                // Method popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       151: astore        5
+       153: aload_0
+       154: aload         5
+       156: aload_2
+       157: invokespecial #441                // Method isForwardTransition:(Lcom/github/statemachine/State;Lcom/github/statemachine/State;)Z
+       160: istore        6
+       162: aload_0
+       163: aload_1
+       164: aload         5
+       166: aload_2
+       167: iload         6
+       169: ifeq          176
+       172: iconst_0
+       173: goto          177
+       176: iconst_1
+       177: invokespecial #445                // Method transitionTo:(Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+       180: istore_3
+       181: iload_3
+       182: ifeq          297
+       185: aload_0
+       186: getfield      #98                 // Field machineId:Ljava/lang/String;
+       189: aload_1
+       190: ldc_w         #448                // String Successfully transitioned from %s->%s
+       193: iconst_2
+       194: anewarray     #3                  // class java/lang/Object
+       197: dup
+       198: iconst_0
+       199: aload         5
+       201: invokevirtual #450                // Method com/github/statemachine/State.getName:()Ljava/lang/String;
+       204: aastore
+       205: dup
+       206: iconst_1
+       207: aload_2
+       208: invokevirtual #450                // Method com/github/statemachine/State.getName:()Ljava/lang/String;
+       211: aastore
+       212: invokestatic  #425                // Method java/lang/String.format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+       215: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+       218: aload         4
+       220: aload_2
+       221: invokestatic  #453                // Method com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+       224: goto          297
+       227: astore        7
+       229: iload_3
+       230: ifne          280
+       233: aload         4
+       235: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       238: dup
+       239: getfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       242: iconst_1
+       243: iadd
+       244: putfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       247: aload_0
+       248: getfield      #181                // Field resetMachineToInitOnFailure:Z
+       251: ifeq          270
+       254: aload_0
+       255: aload_1
+       256: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       259: aload         4
+       261: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+       264: invokestatic  #453                // Method com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+       267: goto          294
+       270: aload_0
+       271: aload_1
+       272: aload         5
+       274: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       277: goto          294
+       280: aload         4
+       282: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       285: dup
+       286: getfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       289: iconst_1
+       290: iadd
+       291: putfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       294: aload         7
+       296: athrow
+       297: iload_3
+       298: ifne          348
+       301: aload         4
+       303: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       306: dup
+       307: getfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       310: iconst_1
+       311: iadd
+       312: putfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       315: aload_0
+       316: getfield      #181                // Field resetMachineToInitOnFailure:Z
+       319: ifeq          338
+       322: aload_0
+       323: aload_1
+       324: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       327: aload         4
+       329: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+       332: invokestatic  #453                // Method com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+       335: goto          378
+       338: aload_0
+       339: aload_1
+       340: aload         5
+       342: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       345: goto          378
+       348: aload         4
+       350: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       353: dup
+       354: getfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       357: iconst_1
+       358: iadd
+       359: putfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       362: goto          378
+       365: astore        8
+       367: aload         4
+       369: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       372: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       375: aload         8
+       377: athrow
+       378: aload         4
+       380: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       383: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       386: goto          418
+       389: new           #79                 // class com/github/statemachine/StateMachineException
+       392: dup
+       393: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       396: ldc_w         #468                // String Timed out while trying to transition state machine
+       399: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       402: athrow
+       403: astore        4
+       405: new           #79                 // class com/github/statemachine/StateMachineException
+       408: dup
+       409: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       412: aload         4
+       414: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       417: athrow
+       418: iload_3
+       419: ireturn
+      Exception table:
+         from    to  target type
+           153   227   227   any
+            30    76   365   any
+            87   135   365   any
+           146   365   365   any
+             6    84   403   Class java/lang/InterruptedException
+            87   143   403   Class java/lang/InterruptedException
+           146   403   403   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 276: 0
+        line 277: 2
+        line 279: 6
+        line 280: 13
+        line 282: 30
+        line 283: 37
+        line 284: 46
+        line 285: 51
+        line 284: 70
+        line 286: 73
+        line 318: 76
+        line 286: 84
+        line 288: 87
+        line 289: 105
+        line 290: 110
+        line 289: 129
+        line 291: 132
+        line 318: 135
+        line 291: 143
+        line 293: 146
+        line 295: 153
+        line 296: 162
+        line 297: 181
+        line 298: 185
+        line 299: 199
+        line 298: 212
+        line 300: 218
+        line 302: 224
+        line 305: 229
+        line 306: 233
+        line 307: 247
+        line 308: 254
+        line 309: 259
+        line 310: 267
+        line 311: 270
+        line 313: 277
+        line 314: 280
+        line 316: 294
+        line 305: 297
+        line 306: 301
+        line 307: 315
+        line 308: 322
+        line 309: 327
+        line 310: 335
+        line 311: 338
+        line 313: 345
+        line 314: 348
+        line 317: 362
+        line 318: 367
+        line 319: 375
+        line 318: 378
+        line 320: 386
+        line 321: 389
+        line 322: 396
+        line 321: 399
+        line 324: 403
+        line 325: 405
+        line 327: 418
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     420     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0     420     1 flowId   Ljava/lang/String;
+            0     420     2 nextState   Lcom/github/statemachine/State;
+            2     418     3 success   Z
+           13     390     4  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+           37     325     5 currentState   Lcom/github/statemachine/State;
+          162      62     6 isForwardTransition   Z
+          405      13     4 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 18
+        frame_type = 254 /* append */
+          offset_delta = 46
+          locals = [ int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State ]
+        frame_type = 40 /* same */
+        frame_type = 17 /* same */
+        frame_type = 40 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 29
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State, int ]
+          stack = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, class com/github/statemachine/State ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 0
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State, int ]
+          stack = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, class com/github/statemachine/State, int ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 49
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 42
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State, top, class java/lang/Throwable ]
+          stack = []
+        frame_type = 9 /* same */
+        frame_type = 13 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 2
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State ]
+          stack = []
+        frame_type = 40 /* same */
+        frame_type = 9 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 16
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int, class com/github/statemachine/StateMachineImpl$Flow ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 12 /* same */
+        frame_type = 10 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 13
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, int ]
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 14 /* same */
+
+  public boolean rewind(java.lang.String, com.github.statemachine.RewindMode) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;Lcom/github/statemachine/RewindMode;)Z
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=5, locals=10, args_size=3
+         0: iconst_0
+         1: istore_3
+         2: aload_0
+         3: invokespecial #308                // Method machineAlive:()V
+         6: aconst_null
+         7: astore        4
+         9: aload_0
+        10: aload_1
+        11: invokespecial #345                // Method lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+        14: astore        4
+        16: aload         4
+        18: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        21: ldc2_w        #14                 // long 100l
+        24: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        27: invokevirtual #160                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        30: ifeq          373
+        33: invokestatic  #474                // Method $SWITCH_TABLE$com$github$statemachine$RewindMode:()[I
+        36: aload_2
+        37: invokevirtual #477                // Method com/github/statemachine/RewindMode.ordinal:()I
+        40: iaload
+        41: tableswitch   { // 1 to 3
+                       1: 68
+                       2: 149
+                       3: 296
+                 default: 338
+            }
+        68: aload_0
+        69: aload_1
+        70: invokevirtual #419                // Method readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+        73: astore        5
+        75: aload         5
+        77: ifnull        91
+        80: aload         5
+        82: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+        85: invokevirtual #432                // Method com/github/statemachine/State.equals:(Ljava/lang/Object;)Z
+        88: ifeq          105
+        91: iload_3
+        92: istore        9
+        94: aload         4
+        96: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+        99: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       102: iload         9
+       104: ireturn
+       105: aload_0
+       106: aload_1
+       107: invokespecial #438                // Method popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       110: astore        5
+       112: aload_0
+       113: aload_1
+       114: invokespecial #438                // Method popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       117: astore        6
+       119: aload_0
+       120: aload_1
+       121: aload         5
+       123: aload         6
+       125: iconst_1
+       126: invokespecial #445                // Method transitionTo:(Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+       129: istore_3
+       130: iload_3
+       131: ifne          362
+       134: aload_0
+       135: getfield      #181                // Field resetMachineToInitOnFailure:Z
+       138: ifeq          362
+       141: aload_0
+       142: aload_1
+       143: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       146: goto          362
+       149: goto          271
+       152: aload_0
+       153: aload_1
+       154: invokespecial #438                // Method popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       157: astore        5
+       159: aload_0
+       160: aload_1
+       161: invokespecial #438                // Method popState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       164: astore        6
+       166: aload_0
+       167: aload_1
+       168: aload         5
+       170: aload         6
+       172: iconst_1
+       173: invokespecial #445                // Method transitionTo:(Ljava/lang/String;Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Z
+       176: istore_3
+       177: goto          228
+       180: astore        7
+       182: iload_3
+       183: ifne          218
+       186: aload_0
+       187: getfield      #181                // Field resetMachineToInitOnFailure:Z
+       190: ifeq          201
+       193: aload_0
+       194: aload_1
+       195: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       198: goto          362
+       201: aload_0
+       202: aload_1
+       203: aload         6
+       205: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       208: aload_0
+       209: aload_1
+       210: aload         5
+       212: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       215: goto          362
+       218: aload         4
+       220: aload         6
+       222: invokestatic  #453                // Method com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+       225: aload         7
+       227: athrow
+       228: iload_3
+       229: ifne          264
+       232: aload_0
+       233: getfield      #181                // Field resetMachineToInitOnFailure:Z
+       236: ifeq          247
+       239: aload_0
+       240: aload_1
+       241: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       244: goto          362
+       247: aload_0
+       248: aload_1
+       249: aload         6
+       251: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       254: aload_0
+       255: aload_1
+       256: aload         5
+       258: invokespecial #326                // Method pushNextState:(Ljava/lang/String;Lcom/github/statemachine/State;)V
+       261: goto          362
+       264: aload         4
+       266: aload         6
+       268: invokestatic  #453                // Method com/github/statemachine/StateMachineImpl$Flow.access$6:(Lcom/github/statemachine/StateMachineImpl$Flow;Lcom/github/statemachine/State;)V
+       271: aload_0
+       272: aload_1
+       273: invokevirtual #419                // Method readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       276: dup
+       277: astore        5
+       279: ifnull        362
+       282: aload         5
+       284: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+       287: invokevirtual #432                // Method com/github/statemachine/State.equals:(Ljava/lang/Object;)Z
+       290: ifeq          152
+       293: goto          362
+       296: aload_0
+       297: aload_1
+       298: invokevirtual #419                // Method readCurrentState:(Ljava/lang/String;)Lcom/github/statemachine/State;
+       301: astore        5
+       303: aload         5
+       305: getstatic     #77                 // Field notStartedState:Lcom/github/statemachine/State;
+       308: invokevirtual #432                // Method com/github/statemachine/State.equals:(Ljava/lang/Object;)Z
+       311: ifeq          328
+       314: iload_3
+       315: istore        9
+       317: aload         4
+       319: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       322: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       325: iload         9
+       327: ireturn
+       328: aload_0
+       329: aload_1
+       330: invokespecial #462                // Method resetMachineToInitOnTransitionFailure:(Ljava/lang/String;)V
+       333: iconst_1
+       334: istore_3
+       335: goto          362
+       338: new           #79                 // class com/github/statemachine/StateMachineException
+       341: dup
+       342: getstatic     #483                // Field com/github/statemachine/StateMachineException$Code.REWIND_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       345: invokespecial #172                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;)V
+       348: athrow
+       349: astore        8
+       351: aload         4
+       353: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       356: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       359: aload         8
+       361: athrow
+       362: aload         4
+       364: invokestatic  #415                // Method com/github/statemachine/StateMachineImpl$Flow.access$5:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$WriteLock;
+       367: invokevirtual #279                // Method java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock.unlock:()V
+       370: goto          402
+       373: new           #79                 // class com/github/statemachine/StateMachineException
+       376: dup
+       377: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       380: ldc_w         #486                // String Timed out while trying to rewind state machine
+       383: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+       386: athrow
+       387: astore        5
+       389: new           #79                 // class com/github/statemachine/StateMachineException
+       392: dup
+       393: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+       396: aload         5
+       398: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+       401: athrow
+       402: iload_3
+       403: ifeq          423
+       406: aload         4
+       408: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       411: dup
+       412: getfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       415: iconst_1
+       416: iadd
+       417: putfield      #465                // Field com/github/statemachine/FlowStatistics.transitionSuccesses:I
+       420: goto          437
+       423: aload         4
+       425: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+       428: dup
+       429: getfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       432: iconst_1
+       433: iadd
+       434: putfield      #457                // Field com/github/statemachine/FlowStatistics.transitionFailures:I
+       437: iload_3
+       438: ireturn
+      Exception table:
+         from    to  target type
+           166   180   180   any
+            33    94   349   any
+           105   317   349   any
+           328   349   349   any
+             9   102   387   Class java/lang/InterruptedException
+           105   325   387   Class java/lang/InterruptedException
+           328   387   387   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 332: 0
+        line 333: 2
+        line 334: 6
+        line 336: 9
+        line 337: 16
+        line 341: 33
+        line 344: 68
+        line 345: 75
+        line 347: 91
+        line 393: 94
+        line 347: 102
+        line 349: 105
+        line 350: 112
+        line 351: 119
+        line 352: 130
+        line 353: 141
+        line 355: 146
+        line 358: 149
+        line 360: 152
+        line 361: 159
+        line 363: 166
+        line 364: 177
+        line 366: 182
+        line 367: 186
+        line 368: 193
+        line 369: 198
+        line 370: 201
+        line 371: 208
+        line 373: 215
+        line 375: 218
+        line 377: 225
+        line 366: 228
+        line 367: 232
+        line 368: 239
+        line 369: 244
+        line 370: 247
+        line 371: 254
+        line 373: 261
+        line 375: 264
+        line 358: 271
+        line 359: 282
+        line 379: 293
+        line 381: 296
+        line 382: 303
+        line 384: 314
+        line 393: 317
+        line 384: 325
+        line 386: 328
+        line 387: 333
+        line 388: 335
+        line 390: 338
+        line 392: 349
+        line 393: 351
+        line 394: 359
+        line 393: 362
+        line 395: 370
+        line 396: 373
+        line 397: 380
+        line 396: 383
+        line 399: 387
+        line 400: 389
+        line 402: 402
+        line 403: 406
+        line 404: 420
+        line 405: 423
+        line 407: 437
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     439     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0     439     1 flowId   Ljava/lang/String;
+            0     439     2  mode   Lcom/github/statemachine/RewindMode;
+            2     437     3 success   Z
+            9     430     4  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+           75      74     5 currentState   Lcom/github/statemachine/State;
+          152     119     5 currentState   Lcom/github/statemachine/State;
+          279      17     5 currentState   Lcom/github/statemachine/State;
+          303      35     5 currentState   Lcom/github/statemachine/State;
+          119      30     6 previousState   Lcom/github/statemachine/State;
+          166     105     6 previousState   Lcom/github/statemachine/State;
+          389      13     5 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 22
+        frame_type = 253 /* append */
+          offset_delta = 68
+          locals = [ int, class com/github/statemachine/StateMachineImpl$Flow ]
+        frame_type = 252 /* append */
+          offset_delta = 22
+          locals = [ class com/github/statemachine/State ]
+        frame_type = 13 /* same */
+        frame_type = 250 /* chop */
+          offset_delta = 43
+        frame_type = 252 /* append */
+          offset_delta = 2
+          locals = [ class com/github/statemachine/State ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 27
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/RewindMode, int, class com/github/statemachine/StateMachineImpl$Flow, class com/github/statemachine/State, class com/github/statemachine/State ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 252 /* append */
+          offset_delta = 20
+          locals = [ class java/lang/Throwable ]
+        frame_type = 16 /* same */
+        frame_type = 250 /* chop */
+          offset_delta = 9
+        frame_type = 18 /* same */
+        frame_type = 16 /* same */
+        frame_type = 249 /* chop */
+          offset_delta = 6
+        frame_type = 24 /* same */
+        frame_type = 252 /* append */
+          offset_delta = 31
+          locals = [ class com/github/statemachine/State ]
+        frame_type = 250 /* chop */
+          offset_delta = 9
+        frame_type = 74 /* same_locals_1_stack_item */
+          stack = [ class java/lang/Throwable ]
+        frame_type = 12 /* same */
+        frame_type = 10 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 14 /* same */
+        frame_type = 20 /* same */
+        frame_type = 13 /* same */
+
+  public boolean alive();
+    descriptor: ()Z
+    flags: ACC_PUBLIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #103                // Field machineAlive:Ljava/util/concurrent/atomic/AtomicBoolean;
+         4: invokevirtual #382                // Method java/util/concurrent/atomic/AtomicBoolean.get:()Z
+         7: ireturn
+      LineNumberTable:
+        line 412: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       8     0  this   Lcom/github/statemachine/StateMachineImpl;
+
+  public com.github.statemachine.State readCurrentState(java.lang.String) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;)Lcom/github/statemachine/State;
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=4, locals=6, args_size=2
+         0: aconst_null
+         1: astore_2
+         2: aload_0
+         3: aload_1
+         4: invokespecial #345                // Method lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+         7: astore_3
+         8: aload_3
+         9: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        12: ldc2_w        #14                 // long 100l
+        15: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        18: invokevirtual #495                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        21: ifeq          72
+        24: aload_3
+        25: invokestatic  #355                // Method com/github/statemachine/StateMachineImpl$Flow.access$0:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/Stack;
+        28: invokevirtual #498                // Method java/util/Stack.peek:()Ljava/lang/Object;
+        31: checkcast     #63                 // class com/github/statemachine/State
+        34: astore_2
+        35: goto          62
+        38: astore        4
+        40: aload_3
+        41: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        44: invokevirtual #501                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+        47: goto          99
+        50: astore        5
+        52: aload_3
+        53: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        56: invokevirtual #501                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+        59: aload         5
+        61: athrow
+        62: aload_3
+        63: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        66: invokevirtual #501                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+        69: goto          99
+        72: new           #79                 // class com/github/statemachine/StateMachineException
+        75: dup
+        76: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+        79: ldc_w         #502                // String Timed out while trying to read current state
+        82: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+        85: athrow
+        86: astore_3
+        87: new           #79                 // class com/github/statemachine/StateMachineException
+        90: dup
+        91: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+        94: aload_3
+        95: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+        98: athrow
+        99: aload_2
+       100: areturn
+      Exception table:
+         from    to  target type
+            24    35    38   Class java/util/EmptyStackException
+            24    40    50   any
+             2    86    86   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 417: 0
+        line 419: 2
+        line 420: 8
+        line 422: 24
+        line 423: 35
+        line 426: 40
+        line 425: 50
+        line 426: 52
+        line 427: 59
+        line 426: 62
+        line 428: 69
+        line 429: 72
+        line 430: 79
+        line 429: 82
+        line 432: 86
+        line 433: 87
+        line 435: 99
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0     101     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0     101     1 flowId   Ljava/lang/String;
+            2      99     2 currentState   Lcom/github/statemachine/State;
+            8      78     3  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+           87      12     3 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 6
+        frame_type = 255 /* full_frame */
+          offset_delta = 38
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State, class com/github/statemachine/StateMachineImpl$Flow ]
+          stack = [ class java/util/EmptyStackException ]
+        frame_type = 75 /* same_locals_1_stack_item */
+          stack = [ class java/lang/Throwable ]
+        frame_type = 11 /* same */
+        frame_type = 9 /* same */
+        frame_type = 255 /* full_frame */
+          offset_delta = 13
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class com/github/statemachine/State ]
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 12 /* same */
+
+  public com.github.statemachine.TransitionFunctor findTranstionFunctor(java.lang.String) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;)Lcom/github/statemachine/TransitionFunctor;
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=2, locals=2, args_size=2
+         0: aload_0
+         1: getfield      #108                // Field stateTransitionTable:Ljava/util/concurrent/ConcurrentMap;
+         4: aload_1
+         5: invokeinterface #508,  2          // InterfaceMethod java/util/concurrent/ConcurrentMap.get:(Ljava/lang/Object;)Ljava/lang/Object;
+        10: checkcast     #205                // class com/github/statemachine/TransitionFunctor
+        13: areturn
+      LineNumberTable:
+        line 441: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      14     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0      14     1 transitionId   Ljava/lang/String;
+
+  public java.lang.String printStateTransitionRoute(java.lang.String) throws com.github.statemachine.StateMachineException;
+    descriptor: (Ljava/lang/String;)Ljava/lang/String;
+    flags: ACC_PUBLIC
+    Exceptions:
+      throws com.github.statemachine.StateMachineException
+    Code:
+      stack=4, locals=5, args_size=2
+         0: aconst_null
+         1: astore_2
+         2: aload_0
+         3: aload_1
+         4: invokespecial #345                // Method lookupFlow:(Ljava/lang/String;)Lcom/github/statemachine/StateMachineImpl$Flow;
+         7: astore_3
+         8: aload_3
+         9: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        12: ldc2_w        #14                 // long 100l
+        15: getstatic     #157                // Field java/util/concurrent/TimeUnit.MILLISECONDS:Ljava/util/concurrent/TimeUnit;
+        18: invokevirtual #495                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.tryLock:(JLjava/util/concurrent/TimeUnit;)Z
+        21: ifeq          60
+        24: aload_3
+        25: getfield      #351                // Field com/github/statemachine/StateMachineImpl$Flow.flowStats:Lcom/github/statemachine/FlowStatistics;
+        28: getfield      #513                // Field com/github/statemachine/FlowStatistics.boundedStateRoute:Ljava/util/Deque;
+        31: invokevirtual #517                // Method java/lang/Object.toString:()Ljava/lang/String;
+        34: astore_2
+        35: goto          50
+        38: astore        4
+        40: aload_3
+        41: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        44: invokevirtual #501                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+        47: aload         4
+        49: athrow
+        50: aload_3
+        51: invokestatic  #491                // Method com/github/statemachine/StateMachineImpl$Flow.access$7:(Lcom/github/statemachine/StateMachineImpl$Flow;)Ljava/util/concurrent/locks/ReentrantReadWriteLock$ReadLock;
+        54: invokevirtual #501                // Method java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock.unlock:()V
+        57: goto          89
+        60: new           #79                 // class com/github/statemachine/StateMachineException
+        63: dup
+        64: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+        67: ldc_w         #518                // String Timed out while trying to print state transition route
+        70: invokespecial #287                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/String;)V
+        73: athrow
+        74: astore        4
+        76: new           #79                 // class com/github/statemachine/StateMachineException
+        79: dup
+        80: getstatic     #282                // Field com/github/statemachine/StateMachineException$Code.OPERATION_LOCK_ACQUISITION_FAILURE:Lcom/github/statemachine/StateMachineException$Code;
+        83: aload         4
+        85: invokespecial #290                // Method com/github/statemachine/StateMachineException."<init>":(Lcom/github/statemachine/StateMachineException$Code;Ljava/lang/Throwable;)V
+        88: athrow
+        89: aload_2
+        90: areturn
+      Exception table:
+         from    to  target type
+            24    38    38   any
+             8    74    74   Class java/lang/InterruptedException
+      LineNumberTable:
+        line 446: 0
+        line 447: 2
+        line 449: 8
+        line 452: 24
+        line 453: 35
+        line 454: 40
+        line 455: 47
+        line 454: 50
+        line 456: 57
+        line 457: 60
+        line 458: 67
+        line 457: 70
+        line 460: 74
+        line 461: 76
+        line 463: 89
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      91     0  this   Lcom/github/statemachine/StateMachineImpl;
+            0      91     1 flowId   Ljava/lang/String;
+            2      89     2 route   Ljava/lang/String;
+            8      83     3  flow   Lcom/github/statemachine/StateMachineImpl$Flow;
+           76      13     4 exception   Ljava/lang/InterruptedException;
+      StackMapTable: number_of_entries = 5
+        frame_type = 255 /* full_frame */
+          offset_delta = 38
+          locals = [ class com/github/statemachine/StateMachineImpl, class java/lang/String, class java/lang/String, class com/github/statemachine/StateMachineImpl$Flow ]
+          stack = [ class java/lang/Throwable ]
+        frame_type = 11 /* same */
+        frame_type = 9 /* same */
+        frame_type = 77 /* same_locals_1_stack_item */
+          stack = [ class java/lang/InterruptedException ]
+        frame_type = 14 /* same */
+
+  static java.lang.String transitionId(com.github.statemachine.State, com.github.statemachine.State, boolean);
+    descriptor: (Lcom/github/statemachine/State;Lcom/github/statemachine/State;Z)Ljava/lang/String;
+    flags: ACC_STATIC
+    Code:
+      stack=3, locals=3, args_size=3
+         0: iload_2
+         1: ifeq          31
+         4: new           #222                // class java/lang/StringBuilder
+         7: dup
+         8: aload_0
+         9: invokevirtual #549                // Method com/github/statemachine/State.getId:()Ljava/lang/String;
+        12: invokestatic  #551                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+        15: invokespecial #226                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+        18: aload_1
+        19: invokevirtual #549                // Method com/github/statemachine/State.getId:()Ljava/lang/String;
+        22: invokevirtual #555                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+        25: invokevirtual #233                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+        28: goto          55
+        31: new           #222                // class java/lang/StringBuilder
+        34: dup
+        35: aload_1
+        36: invokevirtual #549                // Method com/github/statemachine/State.getId:()Ljava/lang/String;
+        39: invokestatic  #551                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+        42: invokespecial #226                // Method java/lang/StringBuilder."<init>":(Ljava/lang/String;)V
+        45: aload_0
+        46: invokevirtual #549                // Method com/github/statemachine/State.getId:()Ljava/lang/String;
+        49: invokevirtual #555                // Method java/lang/StringBuilder.append:(Ljava/lang/String;)Ljava/lang/StringBuilder;
+        52: invokevirtual #233                // Method java/lang/StringBuilder.toString:()Ljava/lang/String;
+        55: areturn
+      LineNumberTable:
+        line 536: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      56     0 fromState   Lcom/github/statemachine/State;
+            0      56     1 toState   Lcom/github/statemachine/State;
+            0      56     2 forward   Z
+      StackMapTable: number_of_entries = 2
+        frame_type = 31 /* same */
+        frame_type = 87 /* same_locals_1_stack_item */
+          stack = [ class java/lang/String ]
+
+  public void finalize();
+    descriptor: ()V
+    flags: ACC_PUBLIC
+    Code:
+      stack=3, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #98                 // Field machineId:Ljava/lang/String;
+         4: aconst_null
+         5: ldc_w         #628                // String Garbage collected stopped state machine
+         8: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+        11: return
+      LineNumberTable:
+        line 687: 0
+        line 688: 11
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0      12     0  this   Lcom/github/statemachine/StateMachineImpl;
+
+  static void access$0(java.lang.String, java.lang.String, java.lang.String);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=3, locals=3, args_size=3
+         0: aload_0
+         1: aload_1
+         2: aload_2
+         3: invokestatic  #147                // Method logInfo:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+         6: return
+      LineNumberTable:
+        line 673: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+
+  static java.lang.String access$1(com.github.statemachine.StateMachineImpl);
+    descriptor: (Lcom/github/statemachine/StateMachineImpl;)Ljava/lang/String;
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=1, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #98                 // Field machineId:Ljava/lang/String;
+         4: areturn
+      LineNumberTable:
+        line 56: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+
+  static void access$2(java.lang.String, java.lang.String, java.lang.String);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=3, locals=3, args_size=3
+         0: aload_0
+         1: aload_1
+         2: aload_2
+         3: invokestatic  #632                // Method logDebug:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+         6: return
+      LineNumberTable:
+        line 678: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+
+  static long access$3(com.github.statemachine.StateMachineImpl);
+    descriptor: (Lcom/github/statemachine/StateMachineImpl;)J
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: aload_0
+         1: getfield      #143                // Field flowExpirationMillis:J
+         4: lreturn
+      LineNumberTable:
+        line 82: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+
+  static void access$4(java.lang.String, java.lang.String, java.lang.String, java.lang.Throwable);
+    descriptor: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=4, locals=4, args_size=4
+         0: aload_0
+         1: aload_1
+         2: aload_2
+         3: aload_3
+         4: invokestatic  #635                // Method logError:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)V
+         7: return
+      LineNumberTable:
+        line 661: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+
+  static int[] $SWITCH_TABLE$com$github$statemachine$RewindMode();
+    descriptor: ()[I
+    flags: ACC_STATIC, ACC_SYNTHETIC
+    Code:
+      stack=3, locals=1, args_size=0
+         0: getstatic     #637                // Field $SWITCH_TABLE$com$github$statemachine$RewindMode:[I
+         3: dup
+         4: ifnull        8
+         7: areturn
+         8: pop
+         9: invokestatic  #639                // Method com/github/statemachine/RewindMode.values:()[Lcom/github/statemachine/RewindMode;
+        12: arraylength
+        13: newarray       int
+        15: astore_0
+        16: aload_0
+        17: getstatic     #642                // Field com/github/statemachine/RewindMode.ALL_THE_WAY_HARD_RESET:Lcom/github/statemachine/RewindMode;
+        20: invokevirtual #477                // Method com/github/statemachine/RewindMode.ordinal:()I
+        23: iconst_3
+        24: iastore
+        25: goto          29
+        28: pop
+        29: aload_0
+        30: getstatic     #645                // Field com/github/statemachine/RewindMode.ALL_THE_WAY_STEP_WISE:Lcom/github/statemachine/RewindMode;
+        33: invokevirtual #477                // Method com/github/statemachine/RewindMode.ordinal:()I
+        36: iconst_2
+        37: iastore
+        38: goto          42
+        41: pop
+        42: aload_0
+        43: getstatic     #648                // Field com/github/statemachine/RewindMode.ONE_STEP:Lcom/github/statemachine/RewindMode;
+        46: invokevirtual #477                // Method com/github/statemachine/RewindMode.ordinal:()I
+        49: iconst_1
+        50: iastore
+        51: goto          55
+        54: pop
+        55: aload_0
+        56: dup
+        57: putstatic     #637                // Field $SWITCH_TABLE$com$github$statemachine$RewindMode:[I
+        60: areturn
+      Exception table:
+         from    to  target type
+            16    25    28   Class java/lang/NoSuchFieldError
+            29    38    41   Class java/lang/NoSuchFieldError
+            42    51    54   Class java/lang/NoSuchFieldError
+      LineNumberTable:
+        line 53: 0
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+      StackMapTable: number_of_entries = 7
+        frame_type = 72 /* same_locals_1_stack_item */
+          stack = [ class "[I" ]
+        frame_type = 255 /* full_frame */
+          offset_delta = 19
+          locals = [ class "[I" ]
+          stack = [ class java/lang/NoSuchFieldError ]
+        frame_type = 0 /* same */
+        frame_type = 75 /* same_locals_1_stack_item */
+          stack = [ class java/lang/NoSuchFieldError ]
+        frame_type = 0 /* same */
+        frame_type = 75 /* same_locals_1_stack_item */
+          stack = [ class java/lang/NoSuchFieldError ]
+        frame_type = 0 /* same */
+}
+SourceFile: "StateMachineImpl.java"
+InnerClasses:
+     public static final #48= #167 of #79; //Code=class com/github/statemachine/StateMachineException$Code of class com/github/statemachine/StateMachineException
+     #240; //class com/github/statemachine/StateMachineImpl$1
+     static final #657= #310 of #1; //Flow=class com/github/statemachine/StateMachineImpl$Flow of class com/github/statemachine/StateMachineImpl
+     public static #661= #659 of #235; //UncaughtExceptionHandler=class java/lang/Thread$UncaughtExceptionHandler of class java/lang/Thread
+     public static #662= #496 of #112; //ReadLock=class java/util/concurrent/locks/ReentrantReadWriteLock$ReadLock of class java/util/concurrent/locks/ReentrantReadWriteLock
+     public static #663= #161 of #112; //WriteLock=class java/util/concurrent/locks/ReentrantReadWriteLock$WriteLock of class java/util/concurrent/locks/ReentrantReadWriteLock
