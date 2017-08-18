@@ -186,7 +186,7 @@ public final class StateMachineImpl implements StateMachine {
     try {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          Flow flow = lookupFlow(flowId);
+          final Flow flow = lookupFlow(flowId);
           logInfo(machineId, flowId, "Stopping flow with " + flow.flowStats);
           flow.stateFlowStack.clear();
           allFlowsTable.remove(flow.flowId);
@@ -510,27 +510,15 @@ public final class StateMachineImpl implements StateMachine {
   private void resetMachineToInitOnTransitionFailure(final String flowId)
       throws StateMachineException {
     machineAlive();
-    try {
-      final Flow flow = lookupFlow(flowId);
-      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          flow.stateFlowStack.clear();
-          pushNextState(flowId, notStartedState);
-          flow.pumpRouteBuffer(notStartedState);
-        } finally {
-          flow.flowWriteLock.unlock();
-        }
-      } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to reset state machine");
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
-    }
+    final Flow flow = lookupFlow(flowId);
+    flow.stateFlowStack.clear();
+    pushNextState(flowId, notStartedState);
+    flow.pumpRouteBuffer(notStartedState);
   }
 
   private State popState(final String flowId) throws StateMachineException {
     State nextState = null;
+    machineAlive();
     try {
       final Flow flow = lookupFlow(flowId);
       if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
@@ -557,21 +545,9 @@ public final class StateMachineImpl implements StateMachine {
 
   private void pushNextState(final String flowId, final State nextState)
       throws StateMachineException {
-    try {
-      final Flow flow = lookupFlow(flowId);
-      if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          flow.stateFlowStack.push(nextState);
-        } finally {
-          flow.flowWriteLock.unlock();
-        }
-      } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to push next state");
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
-    }
+    machineAlive();
+    final Flow flow = lookupFlow(flowId);
+    flow.stateFlowStack.push(nextState);
   }
 
   private void machineAlive() throws StateMachineException {
@@ -584,6 +560,7 @@ public final class StateMachineImpl implements StateMachine {
   private boolean isForwardTransition(final State stateOne, final State stateTwo)
       throws StateMachineException {
     boolean forward = false;
+    machineAlive();
     final String transitionId = transitionId(stateOne, stateTwo, true);
     final TransitionFunctor transitionFunctor = findTranstionFunctor(transitionId);
     if (transitionFunctor != null) {
@@ -602,6 +579,7 @@ public final class StateMachineImpl implements StateMachine {
    * frequently than we would like.
    */
   private Flow lookupFlow(final String flowId) throws StateMachineException {
+    machineAlive();
     final Flow flow = allFlowsTable.get(flowId);
     if (flow == null) {
       throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
