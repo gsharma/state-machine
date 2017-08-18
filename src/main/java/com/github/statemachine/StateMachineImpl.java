@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.logging.log4j.LogManager;
@@ -414,22 +413,11 @@ public final class StateMachineImpl implements StateMachine {
   @Override
   public State readCurrentState(final String flowId) throws StateMachineException {
     State currentState = null;
+    final Flow flow = lookupFlow(flowId);
     try {
-      final Flow flow = lookupFlow(flowId);
-      if (flow.flowReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          currentState = flow.stateFlowStack.peek();
-        } catch (EmptyStackException emptyStack) {
-          // do nothing, returned currentState should be null
-        } finally {
-          flow.flowReadLock.unlock();
-        }
-      } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to read current state");
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+      currentState = flow.stateFlowStack.peek();
+    } catch (EmptyStackException emptyStack) {
+      // do nothing, returned currentState should be null
     }
     return currentState;
   }
@@ -442,24 +430,8 @@ public final class StateMachineImpl implements StateMachine {
 
   @Override
   public String printStateTransitionRoute(final String flowId) throws StateMachineException {
-    String route = null;
     final Flow flow = lookupFlow(flowId);
-    try {
-      if (flow.flowReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          // route = flow.stateFlowStack.toString();
-          route = flow.flowStats.boundedStateRoute.toString();
-        } finally {
-          flow.flowReadLock.unlock();
-        }
-      } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
-            "Timed out while trying to print state transition route");
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
-    }
-    return route;
+    return flow.flowStats.boundedStateRoute.toString();
   }
 
   /**
@@ -693,7 +665,6 @@ public final class StateMachineImpl implements StateMachine {
     private transient String machineId;
 
     private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
-    private final ReadLock flowReadLock = superFlowLock.readLock();
     private final WriteLock flowWriteLock = superFlowLock.writeLock();
 
     // allow safer state rewinding. Note that apart from the stateFlowStack, there is no modifiable
