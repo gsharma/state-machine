@@ -119,6 +119,10 @@ public interface StateMachine {
     private StateMachineConfiguration config;
     private List<TransitionFunctor> transitionFunctors;
 
+    public static StateMachineBuilder newBuilder() {
+      return new StateMachineBuilder();
+    }
+
     public StateMachineBuilder config(final StateMachineConfiguration config) {
       this.config = config;
       return this;
@@ -132,6 +136,8 @@ public interface StateMachine {
     public StateMachine build() throws StateMachineException {
       return new StateMachineImpl(config, transitionFunctors);
     }
+
+    private StateMachineBuilder() {}
   }
 
 }
