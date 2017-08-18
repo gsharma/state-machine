@@ -76,7 +76,6 @@ public final class StateMachineImpl implements StateMachine {
   // global state machine level locks
   private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
   private final WriteLock machineWriteLock = machineSuperLock.writeLock();
-  private final ReadLock machineReadLock = machineSuperLock.readLock();
 
   private boolean resetMachineToInitOnFailure;
   private long flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
@@ -631,25 +630,12 @@ public final class StateMachineImpl implements StateMachine {
    * frequently than we would like.
    */
   private Flow lookupFlow(final String flowId) throws StateMachineException {
-    Flow flow = null;
-    try {
-      if (machineReadLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        try {
-          flow = allFlowsTable.get(flowId);
-          if (flow == null) {
-            throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
-          }
-          // TODO: optimize placement of touch() to be invoked more sparingly.
-          flow.touch();
-        } finally {
-          machineReadLock.unlock();
-        }
-      } else {
-        throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE);
-      }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    final Flow flow = allFlowsTable.get(flowId);
+    if (flow == null) {
+      throw new StateMachineException(Code.ILLEGAL_FLOW_ID);
     }
+    // TODO: optimize placement of touch() to be invoked more sparingly.
+    flow.touch();
     return flow;
   }
 
