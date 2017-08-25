@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -226,7 +227,7 @@ public class StateMachineTest {
     assertTrue(machine.rewind(flowId, RewindMode.ALL_THE_WAY_STEP_WISE));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
-    logger.info("route::" + machine.printStateTransitionRoute(flowId));
+    logger.info("route::" + Arrays.deepToString(machine.getStateTransitionRoute(flowId)));
     assertTrue(machine.stopFlow(flowId));
 
     assertTrue(machine.alive());
@@ -366,7 +367,7 @@ public class StateMachineTest {
             BtoCCounterFailure.incrementAndGet();
           }
 
-          logger.info("route::" + machine.printStateTransitionRoute(flowId));
+          logger.info("route::" + Arrays.deepToString(machine.getStateTransitionRoute(flowId)));
 
           logger.info(machine.getStatistics().toString());
           assertTrue(machine.stopFlow(flowId));

@@ -2,6 +2,8 @@ package com.github.statemachine;
 
 import java.util.List;
 
+import com.github.statemachine.FlowStatistics.StateTimePair;
+
 /**
  * A simple Finite State Machine. Depending on how the transitions are implemented, this machine may
  * be setup as either deterministic or non-deterministic. There's nothing that forces the user's
@@ -76,9 +78,11 @@ public interface StateMachine {
   State readCurrentState(final String flowId) throws StateMachineException;
 
   /**
-   * Print the potential route of state transitions.
+   * Pull the potential route of state transitions. Note that the overall path could be huge -
+   * thousands of transitions. So, this will return the last x state transitions and e'thing prior
+   * will have been pruned.
    */
-  String printStateTransitionRoute(final String flowId) throws StateMachineException;
+  StateTimePair[] getStateTransitionRoute(final String flowId) throws StateMachineException;
 
 
   ///// Non-Flow specific overall State Machine Functions /////

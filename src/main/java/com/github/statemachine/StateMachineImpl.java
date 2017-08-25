@@ -429,9 +429,11 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public String printStateTransitionRoute(final String flowId) throws StateMachineException {
+  public StateTimePair[] getStateTransitionRoute(final String flowId)
+      throws StateMachineException {
     final Flow flow = lookupFlow(flowId);
-    return flow.flowStats.boundedStateRoute.toString();
+    return flow.flowStats.boundedStateRoute
+        .toArray(new StateTimePair[flow.flowStats.boundedStateRoute.size()]);
   }
 
   /**
