@@ -1,5 +1,7 @@
 package com.github.statemachine;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.github.statemachine.FlowStatistics.StateTimePair;
@@ -121,7 +123,7 @@ public interface StateMachine {
    */
   public final static class StateMachineBuilder {
     private StateMachineConfiguration config;
-    private List<TransitionFunctor> transitionFunctors;
+    private final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
 
     public static StateMachineBuilder newBuilder() {
       return new StateMachineBuilder();
@@ -132,8 +134,15 @@ public interface StateMachine {
       return this;
     }
 
-    public StateMachineBuilder transtionFunctors(final List<TransitionFunctor> transitionFunctors) {
-      this.transitionFunctors = transitionFunctors;
+    public StateMachineBuilder transitionFunctor(final TransitionFunctor transitionFunctor) {
+      this.transitionFunctors.add(transitionFunctor);
+      return this;
+    }
+
+    public StateMachineBuilder transitionFunctors(final TransitionFunctor[] transitionFunctors) {
+      for (TransitionFunctor transitionFunctor : transitionFunctors) {
+        this.transitionFunctors.add(transitionFunctor);
+      }
       return this;
     }
 
