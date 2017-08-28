@@ -3,15 +3,22 @@ package com.github.statemachine;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.EmptyStackException;
 import java.util.Iterator;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
@@ -65,6 +72,11 @@ public final class StateMachineImpl implements StateMachine {
   private final ConcurrentMap<String, TransitionFunctor> stateTransitionTable =
       new ConcurrentHashMap<>();
 
+  private LinkedList<TransitionFunctor> transitionFunctors;
+
+  private ExecutorService flowRunner;
+  private CompletionService<FlowResult> flowCompletionService;
+
   // K=flow.flowId, V=flow. We may be able to do with the non-chm implementation.
   final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
 
@@ -75,9 +87,6 @@ public final class StateMachineImpl implements StateMachine {
   // global state machine level locks
   private final ReentrantReadWriteLock machineSuperLock = new ReentrantReadWriteLock(true);
   private final WriteLock machineWriteLock = machineSuperLock.writeLock();
-
-  private boolean resetMachineToInitOnFailure;
-  private long flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
 
   private StateMachineConfiguration config;
 
@@ -90,7 +99,7 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   StateMachineImpl(final StateMachineConfiguration config,
-      final List<TransitionFunctor> transitionFunctors) throws StateMachineException {
+      final LinkedList<TransitionFunctor> transitionFunctors) throws StateMachineException {
     logInfo(machineId, null, "Firing up state machine");
     if (alive()) {
       logInfo(machineId, null, "Cannot fire up an already running state machine");
@@ -100,22 +109,38 @@ public final class StateMachineImpl implements StateMachine {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           if (config == null) {
-            throw new StateMachineException(Code.INVALID_CONFIG);
+            throw new StateMachineException(Code.INVALID_MACHINE_CONFIG);
           }
+          config.validate();
           this.config = config;
-          this.resetMachineToInitOnFailure = config.resetMachineToInitOnFailure();
-          this.flowExpirationMillis = config.getFlowExpirationMillis();
           if (transitionFunctors == null || transitionFunctors.isEmpty()) {
             throw new StateMachineException(Code.INVALID_TRANSITIONS);
           }
-          // final List<Transition> unmodifiableTransitions = new ArrayList<>(transitions.size());
-          // Collections.copy(unmodifiableTransitions, transitions);
+
+          // TODO: need to put upper-bounds on max live concurrent flows per machine
+          if (config.getFlowMode() == FlowMode.AUTO) {
+            int flowRunners = Runtime.getRuntime().availableProcessors() * 2;
+            flowRunner = Executors.newFixedThreadPool(flowRunners, new ThreadFactory() {
+              final AtomicInteger threadCounter = new AtomicInteger();
+
+              @Override
+              public Thread newThread(Runnable runnable) {
+                Thread thread = new Thread(runnable);
+                thread.setName("flow-runner-" + threadCounter.getAndIncrement());
+                return thread;
+              }
+
+            });
+            flowCompletionService = new ExecutorCompletionService<FlowResult>(flowRunner);
+          }
+
           for (final TransitionFunctor transitionFunctor : transitionFunctors) {
             if (transitionFunctor != null) {
               stateTransitionTable.put(transitionFunctor.getForwardId(), transitionFunctor);
               stateTransitionTable.put(transitionFunctor.getReverseId(), transitionFunctor);
             }
           }
+          this.transitionFunctors = transitionFunctors;
           logInfo(machineId, null,
               "Successfully hydrated stateTransitionTable: " + stateTransitionTable);
 
@@ -157,7 +182,6 @@ public final class StateMachineImpl implements StateMachine {
     try {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          // TODO: need to put upper-bounds on max live concurrent flows per machine
           final Flow flow = new Flow();
           flow.machineId = machineId;
           flow.touch();
@@ -165,6 +189,9 @@ public final class StateMachineImpl implements StateMachine {
           allFlowsTable.put(flowId, flow);
           pushNextState(flowId, notStartedState);
           machineStats.totalStartedFlows++;
+          if (config.getFlowMode() == FlowMode.AUTO) {
+            flowCompletionService.submit(new FlowJob(flowId, transitionFunctors, this));
+          }
           logInfo(machineId, flowId, "Started flow");
         } finally {
           machineWriteLock.unlock();
@@ -187,12 +214,17 @@ public final class StateMachineImpl implements StateMachine {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
           final Flow flow = lookupFlow(flowId);
-          logInfo(machineId, flowId, "Stopping flow with " + flow.flowStats);
-          flow.stateFlowStack.clear();
-          allFlowsTable.remove(flow.flowId);
-          success = true;
-          machineStats.totalStoppedFlows++;
-          logInfo(machineId, flowId, "Stopped flow");
+          if (!flow.stopped) {
+            logInfo(machineId, flowId, "Stopping flow with " + flow.flowStats);
+            flow.stateFlowStack.clear();
+            allFlowsTable.remove(flow.flowId);
+            flow.stopped = true;
+            success = true;
+            machineStats.totalStoppedFlows++;
+            logInfo(machineId, flowId, "Stopped flow");
+          } else {
+            logInfo(machineId, flowId, "Flow is already stopped");
+          }
         } finally {
           machineWriteLock.unlock();
         }
@@ -231,9 +263,14 @@ public final class StateMachineImpl implements StateMachine {
     logInfo(machineId, null, "Demolishing state machine");
     try {
       if (machineWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
-        // 1. signal death
+        // 0. signal death
         machineAlive.set(false);
         try {
+          // 1. stop flow runner
+          if (flowRunner != null) {
+            flowRunner.shutdownNow();
+          }
+
           // 2. interrupt flow purger
           flowPurgerDaemon.interrupt();
           flowPurgerDaemon.join();
@@ -302,7 +339,7 @@ public final class StateMachineImpl implements StateMachine {
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
               flow.flowStats.transitionFailures++;
-              if (resetMachineToInitOnFailure) {
+              if (config.resetMachineToInitOnFailure()) {
                 resetMachineToInitOnTransitionFailure(flowId);
                 flow.pumpRouteBuffer(notStartedState);
               } else {
@@ -326,7 +363,7 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public boolean rewind(final String flowId, final RewindMode mode) throws StateMachineException {
+  public boolean rewind(final String flowId) throws StateMachineException {
     boolean success = false;
     machineAlive();
     Flow flow = null;
@@ -334,6 +371,7 @@ public final class StateMachineImpl implements StateMachine {
       flow = lookupFlow(flowId);
       if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
+          final RewindMode mode = config.getRewindMode();
           State currentState;
           State previousState;
           switch (mode) {
@@ -347,7 +385,7 @@ public final class StateMachineImpl implements StateMachine {
               currentState = popState(flowId);
               previousState = popState(flowId);
               success = transitionTo(flowId, currentState, previousState, true);
-              if (!success && resetMachineToInitOnFailure) {
+              if (!success && config.resetMachineToInitOnFailure()) {
                 resetMachineToInitOnTransitionFailure(flowId);
               }
               break;
@@ -362,7 +400,7 @@ public final class StateMachineImpl implements StateMachine {
                 } finally {
                   // in case of transition failure, remember to revert the stateFlowStack
                   if (!success) {
-                    if (resetMachineToInitOnFailure) {
+                    if (config.resetMachineToInitOnFailure()) {
                       resetMachineToInitOnTransitionFailure(flowId);
                     } else {
                       pushNextState(flowId, previousState);
@@ -429,8 +467,7 @@ public final class StateMachineImpl implements StateMachine {
   }
 
   @Override
-  public StateTimePair[] getStateTransitionRoute(final String flowId)
-      throws StateMachineException {
+  public StateTimePair[] getStateTransitionRoute(final String flowId) throws StateMachineException {
     final Flow flow = lookupFlow(flowId);
     return flow.flowStats.boundedStateRoute
         .toArray(new StateTimePair[flow.flowStats.boundedStateRoute.size()]);
@@ -643,6 +680,7 @@ public final class StateMachineImpl implements StateMachine {
   final static class Flow {
     private final String flowId = UUID.randomUUID().toString();
     private transient String machineId;
+    private boolean stopped;
 
     private final ReentrantReadWriteLock superFlowLock = new ReentrantReadWriteLock(true);
     private final WriteLock flowWriteLock = superFlowLock.writeLock();
@@ -687,6 +725,62 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
+  private final static class FlowJob implements Callable<FlowResult> {
+    private final String flowId;
+    private final LinkedList<TransitionFunctor> transitionFunctors;
+    private final StateMachine stateMachine;
+    private FlowState flowState = FlowState.NOT_STARTED;
+
+    private FlowJob(final String flowId, final LinkedList<TransitionFunctor> transitionFunctors,
+        final StateMachine stateMachine) {
+      this.flowId = flowId;
+      this.transitionFunctors = transitionFunctors;
+      this.stateMachine = stateMachine;
+    }
+
+    @Override
+    public FlowResult call() {
+      logInfo(stateMachine.getId(), flowId, "Starting flow");
+      flowState = FlowState.RUNNING;
+      FlowResult result = new FlowResult();
+      result.flowId = flowId;
+      boolean success = true;
+      try {
+        try {
+          for (final TransitionFunctor transitionFunctor : transitionFunctors) {
+            if (success) {
+              success = stateMachine.transitionTo(flowId, transitionFunctor.getToState());
+            }
+          }
+        } finally {
+          stateMachine.stopFlow(flowId);
+        }
+      } catch (StateMachineException problem) {
+        result.exception = problem;
+      }
+      flowState = success ? FlowState.SUCCESS : FlowState.FAILURE;
+      result.flowState = flowState;
+      logInfo(stateMachine.getId(), flowId, result.toString());
+      return result;
+    }
+  }
+
+  private static enum FlowState {
+    NOT_STARTED, RUNNING, SUCCESS, FAILURE;
+  }
+
+  private static class FlowResult {
+    private String flowId;
+    private FlowState flowState;
+    private StateMachineException exception;
+
+    @Override
+    public String toString() {
+      return "FlowResult [flowId=" + flowId + ", flowState=" + flowState + ", exception="
+          + exception + "]";
+    }
+  }
+
   /**
    * This daemon exists to purge flows that have not been stopped and are still lingering past their
    * TTL.
@@ -718,7 +812,7 @@ public final class StateMachineImpl implements StateMachine {
           if (flow != null) {
             scanned++;
             if (System.currentTimeMillis() > (flow.flowStats.lastTouchTimeMillis
-                + flowExpirationMillis)) {
+                + config.getFlowExpirationMillis())) {
               flow.stateFlowStack.clear();
               flowIterator.remove();
               logInfo(machineId, flow.flowId,

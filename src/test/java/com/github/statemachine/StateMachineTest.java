@@ -35,9 +35,10 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
@@ -69,6 +70,33 @@ public class StateMachineTest {
   }
 
   @Test
+  public void testStateMachineFlowAuto() throws Exception {
+    // 1. prep transitions
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    final TransitionBVsC BtoC = new TransitionBVsC();
+
+    // 2. load up the fsm with all its transitions
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.AUTO, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
+    assertTrue(machine.alive());
+
+    // 3. start a flow
+    final String flowId = machine.startFlow();
+    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
+
+    // 4. give it a lil breather to finish running
+    Thread.sleep(10L);
+
+    // 5. stop the fsm
+    assertTrue(machine.alive());
+    assertTrue(machine.demolish());
+    assertFalse(machine.alive());
+  }
+
+  @Test
   public void testMultipleFlows() throws StateMachineException {
     // 1. prep transitions
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
@@ -76,9 +104,10 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
@@ -120,7 +149,7 @@ public class StateMachineTest {
 
     // 4c. execute a flow transition
     // B->A
-    assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+    assertTrue(machine.rewind(flowId));
     assertEquals(AtoB.getFromState(), machine.readCurrentState(flowId));
 
     // 5. stop the flow
@@ -138,10 +167,10 @@ public class StateMachineTest {
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
     final TransitionCVsD CtoD = new TransitionCVsD();
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine =
-        StateMachineBuilder.newBuilder().config(config).transitionFunctor(toA)
-            .transitionFunctor(AtoB).transitionFunctor(BtoC).transitionFunctor(CtoD).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).next(CtoD).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -173,9 +202,10 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_STEP_WISE, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -192,7 +222,7 @@ public class StateMachineTest {
     assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
     // C->B->A->INIT
-    assertTrue(machine.rewind(flowId, RewindMode.ALL_THE_WAY_STEP_WISE));
+    assertTrue(machine.rewind(flowId));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
     // INIT->A
@@ -208,7 +238,7 @@ public class StateMachineTest {
     assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
     // C->B->A->INIT
-    assertTrue(machine.rewind(flowId, RewindMode.ALL_THE_WAY_STEP_WISE));
+    assertTrue(machine.rewind(flowId));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
     logger.info("route::" + Arrays.deepToString(machine.getStateTransitionRoute(flowId)));
@@ -224,9 +254,10 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -243,15 +274,15 @@ public class StateMachineTest {
     assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
     // C->B
-    assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+    assertTrue(machine.rewind(flowId));
     assertEquals(BtoC.getFromState(), machine.readCurrentState(flowId));
 
     // B->A
-    assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+    assertTrue(machine.rewind(flowId));
     assertEquals(AtoB.getFromState(), machine.readCurrentState(flowId));
 
     // A->INIT
-    assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+    assertTrue(machine.rewind(flowId));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
     assertTrue(machine.stopFlow(flowId));
@@ -266,9 +297,10 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -285,7 +317,7 @@ public class StateMachineTest {
     assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
     // C->INIT
-    assertTrue(machine.rewind(flowId, RewindMode.ALL_THE_WAY_HARD_RESET));
+    assertTrue(machine.rewind(flowId));
     assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
     assertTrue(machine.stopFlow(flowId));
@@ -304,9 +336,10 @@ public class StateMachineTest {
     transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
-    final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config)
-        .transitionFunctor(toA).transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+    final StateMachineConfiguration config =
+        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
 
     final AtomicInteger toACounterSuccess = new AtomicInteger();
     final AtomicInteger toACounterFailure = new AtomicInteger();
@@ -389,9 +422,10 @@ public class StateMachineTest {
       public void run() {
         StateMachine machine = null;
         try {
-          final StateMachineConfiguration config = new StateMachineConfiguration(true, 0);
-          machine = StateMachineBuilder.newBuilder().config(config).transitionFunctor(toA)
-              .transitionFunctor(AtoB).transitionFunctor(BtoC).build();
+          final StateMachineConfiguration config =
+              new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+          machine = StateMachineBuilder.newBuilder().config(config).transitions().next(toA)
+              .next(AtoB).next(BtoC).build();
           final String flowId = machine.startFlow();
           assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
@@ -408,15 +442,15 @@ public class StateMachineTest {
           assertEquals(BtoC.getToState(), machine.readCurrentState(flowId));
 
           // C->B
-          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertTrue(machine.rewind(flowId));
           assertEquals(BtoC.getFromState(), machine.readCurrentState(flowId));
 
           // B->A
-          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertTrue(machine.rewind(flowId));
           assertEquals(AtoB.getFromState(), machine.readCurrentState(flowId));
 
           // A->INIT
-          assertTrue(machine.rewind(flowId, RewindMode.ONE_STEP));
+          assertTrue(machine.rewind(flowId));
           assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
           assertTrue(machine.stopFlow(flowId));

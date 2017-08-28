@@ -1,8 +1,6 @@
 package com.github.statemachine;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedList;
 
 import com.github.statemachine.FlowStatistics.StateTimePair;
 
@@ -72,7 +70,7 @@ public interface StateMachine {
    * 
    * Returns true iff the state transition was successful.
    */
-  boolean rewind(final String flowId, final RewindMode mode) throws StateMachineException;
+  boolean rewind(final String flowId) throws StateMachineException;
 
   /**
    * Read/report the current state of the state machine.
@@ -123,7 +121,7 @@ public interface StateMachine {
    */
   public final static class StateMachineBuilder {
     private StateMachineConfiguration config;
-    private final List<TransitionFunctor> transitionFunctors = new ArrayList<>();
+    private LinkedList<TransitionFunctor> transitionFunctors;
 
     public static StateMachineBuilder newBuilder() {
       return new StateMachineBuilder();
@@ -134,15 +132,13 @@ public interface StateMachine {
       return this;
     }
 
-    public StateMachineBuilder transitionFunctor(final TransitionFunctor transitionFunctor) {
-      this.transitionFunctors.add(transitionFunctor);
+    public StateMachineBuilder transitions() {
+      transitionFunctors = new LinkedList<>();
       return this;
     }
 
-    public StateMachineBuilder transitionFunctors(final TransitionFunctor[] transitionFunctors) {
-      for (TransitionFunctor transitionFunctor : transitionFunctors) {
-        this.transitionFunctors.add(transitionFunctor);
-      }
+    public StateMachineBuilder next(final TransitionFunctor transitionFunctor) {
+      this.transitionFunctors.add(transitionFunctor);
       return this;
     }
 

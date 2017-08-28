@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
  * @author gaurav
  */
 public final class StateMachineConfiguration {
+  private final FlowMode flowMode;
+  private final RewindMode rewindMode;
   private final boolean resetMachineToInitOnFailure;
   private final long flowExpirationMillis;
 
@@ -24,9 +26,11 @@ public final class StateMachineConfiguration {
    * 2. An upper-bound/ceiling is not yet hard-coded but if we set this to a non-sensible TTL value,
    * all those flow instances could lead to potential heap overflow.<br>
    */
-  public StateMachineConfiguration(final boolean resetMachineToInitOnFailure,
-      final long flowExpirationMillis) {
+  public StateMachineConfiguration(final FlowMode flowMode, final RewindMode rewindMode,
+      final boolean resetMachineToInitOnFailure, final long flowExpirationMillis) {
     this.resetMachineToInitOnFailure = resetMachineToInitOnFailure;
+    this.flowMode = flowMode;
+    this.rewindMode = rewindMode;
     if (flowExpirationMillis <= 0L) {
       this.flowExpirationMillis = TimeUnit.MINUTES.toMillis(10L);
     } else {
@@ -42,10 +46,33 @@ public final class StateMachineConfiguration {
     return flowExpirationMillis;
   }
 
+  public FlowMode getFlowMode() {
+    return flowMode;
+  }
+
+  public RewindMode getRewindMode() {
+    return rewindMode;
+  }
+
+  public void validate() throws StateMachineException {
+    StringBuilder messages = new StringBuilder();
+    if (flowMode == null) {
+      messages.append("FlowMode cannot be null. ");
+    }
+    if (rewindMode == null) {
+      messages.append("RewindMode cannot be null. ");
+    }
+    if (messages.length() > 0) {
+      throw new StateMachineException(StateMachineException.Code.INVALID_MACHINE_CONFIG,
+          messages.toString());
+    }
+  }
+
   @Override
   public String toString() {
-    return "StateMachineConfiguration [resetMachineToInitOnFailure=" + resetMachineToInitOnFailure
-        + ", flowExpirationMillis=" + flowExpirationMillis + "]";
+    return "StateMachineConfiguration [flowMode=" + flowMode + ", rewindMode=" + rewindMode
+        + ", resetMachineToInitOnFailure=" + resetMachineToInitOnFailure + ", flowExpirationMillis="
+        + flowExpirationMillis + "]";
   }
 
 }

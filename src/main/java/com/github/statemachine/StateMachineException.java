@@ -38,8 +38,8 @@ public final class StateMachineException extends Exception {
                             + " characters"), INVALID_STATE(
                                 "Null state is invalid"), INVALID_TRANSITIONS(
                                     "Transitions are null or empty"), ILLEGAL_TRANSITION(
-                                        "Attempted transition between from->to states is illegal"), INVALID_CONFIG(
-                                            "Configuration cannot be null"), ILLEGAL_FLOW_ID(
+                                        "Attempted transition between from->to states is illegal"), INVALID_MACHINE_CONFIG(
+                                            "State machine configuration is invalid"), ILLEGAL_FLOW_ID(
                                                 "State machine failed to lookup flow with provided id");
 
     private String description;
