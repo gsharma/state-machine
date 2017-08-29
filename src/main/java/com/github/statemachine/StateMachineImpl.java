@@ -75,7 +75,7 @@ public final class StateMachineImpl implements StateMachine {
   private LinkedList<TransitionFunctor> transitionFunctors;
 
   private ExecutorService flowRunner;
-  private CompletionService<FlowResult> flowCompletionService;
+  private CompletionService<AutoFlowResult> flowCompletionService;
 
   // K=flow.flowId, V=flow. We may be able to do with the non-chm implementation.
   final ConcurrentMap<String, Flow> allFlowsTable = new ConcurrentHashMap<>();
@@ -118,7 +118,7 @@ public final class StateMachineImpl implements StateMachine {
           }
 
           // TODO: need to put upper-bounds on max live concurrent flows per machine
-          if (config.getFlowMode() == FlowMode.AUTO) {
+          if (config.getFlowMode() == FlowMode.AUTO_ASYNC) {
             int flowRunners = Runtime.getRuntime().availableProcessors() * 2;
             flowRunner = Executors.newFixedThreadPool(flowRunners, new ThreadFactory() {
               final AtomicInteger threadCounter = new AtomicInteger();
@@ -127,11 +127,17 @@ public final class StateMachineImpl implements StateMachine {
               public Thread newThread(Runnable runnable) {
                 Thread thread = new Thread(runnable);
                 thread.setName("flow-runner-" + threadCounter.getAndIncrement());
+                thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                  @Override
+                  public void uncaughtException(Thread thread, Throwable error) {
+                    logError(machineId, null, "Logging unhandled exception.", error);
+                  }
+                });
                 return thread;
               }
 
             });
-            flowCompletionService = new ExecutorCompletionService<FlowResult>(flowRunner);
+            flowCompletionService = new ExecutorCompletionService<AutoFlowResult>(flowRunner);
           }
 
           for (final TransitionFunctor transitionFunctor : transitionFunctors) {
@@ -189,8 +195,16 @@ public final class StateMachineImpl implements StateMachine {
           allFlowsTable.put(flowId, flow);
           pushNextState(flowId, notStartedState);
           machineStats.totalStartedFlows++;
-          if (config.getFlowMode() == FlowMode.AUTO) {
-            flowCompletionService.submit(new FlowJob(flowId, transitionFunctors, this));
+          switch (config.getFlowMode()) {
+            case AUTO_ASYNC:
+              flowCompletionService.submit(new FlowJob(flowId, transitionFunctors, this, true));
+              break;
+            case AUTO_CALLER_THREAD:
+              AutoFlowResult flowResult =
+                  new FlowJob(flowId, transitionFunctors, this, false).call();
+              break;
+            case MANUAL:
+              break;
           }
           logInfo(machineId, flowId, "Started flow");
         } finally {
@@ -725,24 +739,33 @@ public final class StateMachineImpl implements StateMachine {
     }
   }
 
-  private final static class FlowJob implements Callable<FlowResult> {
+  /**
+   * This job transitions a flow in an fsm through its various states. It is run by a worker thread
+   * of the flowRunner service.
+   * 
+   * Note that the flowJob and the flowRunner by extension, is nothing but a puppeteer and know
+   * nothing about the execution order, rules or behaviors of the state machine and its flows.
+   */
+  private final static class FlowJob implements Callable<AutoFlowResult> {
     private final String flowId;
     private final LinkedList<TransitionFunctor> transitionFunctors;
     private final StateMachine stateMachine;
     private FlowState flowState = FlowState.NOT_STARTED;
+    private final boolean autoStop;
 
     private FlowJob(final String flowId, final LinkedList<TransitionFunctor> transitionFunctors,
-        final StateMachine stateMachine) {
+        final StateMachine stateMachine, final boolean autoStop) {
       this.flowId = flowId;
       this.transitionFunctors = transitionFunctors;
       this.stateMachine = stateMachine;
+      this.autoStop = autoStop;
     }
 
     @Override
-    public FlowResult call() {
+    public AutoFlowResult call() {
       logInfo(stateMachine.getId(), flowId, "Starting flow");
       flowState = FlowState.RUNNING;
-      FlowResult result = new FlowResult();
+      AutoFlowResult result = new AutoFlowResult();
       result.flowId = flowId;
       boolean success = true;
       try {
@@ -753,7 +776,9 @@ public final class StateMachineImpl implements StateMachine {
             }
           }
         } finally {
-          stateMachine.stopFlow(flowId);
+          if (autoStop) {
+            stateMachine.stopFlow(flowId);
+          }
         }
       } catch (StateMachineException problem) {
         result.exception = problem;
@@ -769,14 +794,14 @@ public final class StateMachineImpl implements StateMachine {
     NOT_STARTED, RUNNING, SUCCESS, FAILURE;
   }
 
-  private static class FlowResult {
+  private static class AutoFlowResult {
     private String flowId;
     private FlowState flowState;
     private StateMachineException exception;
 
     @Override
     public String toString() {
-      return "FlowResult [flowId=" + flowId + ", flowState=" + flowState + ", exception="
+      return "AutoFlowResult [flowId=" + flowId + ", flowState=" + flowState + ", exception="
           + exception + "]";
     }
   }
@@ -799,6 +824,12 @@ public final class StateMachineImpl implements StateMachine {
       setName("flow-purger");
       setDaemon(true);
       this.sleepMillis = sleepMillis;
+      Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+        @Override
+        public void uncaughtException(Thread thread, Throwable error) {
+          logError(machineId, null, "Logging unhandled exception.", error);
+        }
+      });
     }
 
     @Override

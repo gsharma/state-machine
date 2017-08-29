@@ -70,15 +70,15 @@ public class StateMachineTest {
   }
 
   @Test
-  public void testStateMachineFlowAuto() throws Exception {
+  public void testStateMachineFlowAutoAsync() throws Exception {
     // 1. prep transitions
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.AUTO, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = new StateMachineConfiguration(FlowMode.AUTO_ASYNC,
+        RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
@@ -89,6 +89,32 @@ public class StateMachineTest {
 
     // 4. give it a lil breather to finish running
     Thread.sleep(10L);
+
+    // 5. stop the fsm
+    assertTrue(machine.alive());
+    assertTrue(machine.demolish());
+    assertFalse(machine.alive());
+  }
+
+  @Test
+  public void testStateMachineFlowAutoCallerThread() throws Exception {
+    // 1. prep transitions
+    final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+    final TransitionAVsB AtoB = new TransitionAVsB();
+    final TransitionBVsC BtoC = new TransitionBVsC();
+
+    // 2. load up the fsm with all its transitions
+    final StateMachineConfiguration config = new StateMachineConfiguration(
+        FlowMode.AUTO_CALLER_THREAD, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+        .next(toA).next(AtoB).next(BtoC).build();
+    assertTrue(machine.alive());
+
+    // 3. start a flow
+    final String flowId = machine.startFlow();
+
+    // 4. stop the flow
+    assertTrue(machine.stopFlow(flowId));
 
     // 5. stop the fsm
     assertTrue(machine.alive());
