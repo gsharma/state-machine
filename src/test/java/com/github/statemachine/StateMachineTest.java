@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 
 import com.github.statemachine.StateMachine.StateMachineBuilder;
+import com.github.statemachine.StateMachineConfiguration.StateMachineConfigurationBuilder;
 import com.github.statemachine.StateMachineException.Code;
 
 /**
@@ -35,8 +36,9 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
@@ -77,15 +79,15 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config = new StateMachineConfiguration(FlowMode.AUTO_ASYNC,
-        RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.AUTO_ASYNC).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
     final String flowId = machine.startFlow();
-    assertEquals(StateMachineImpl.notStartedState, machine.readCurrentState(flowId));
 
     // 4. give it a lil breather to finish running
     Thread.sleep(10L);
@@ -104,8 +106,9 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config = new StateMachineConfiguration(
-        FlowMode.AUTO_CALLER_THREAD, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.AUTO_CALLER_THREAD).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
@@ -130,8 +133,9 @@ public class StateMachineTest {
     final TransitionBVsC BtoC = new TransitionBVsC();
 
     // 2. load up the fsm with all its transitions
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ONE_STEP).resetMachineToInitOnFailure(true)
+        .flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     assertTrue(machine.alive());
@@ -193,8 +197,9 @@ public class StateMachineTest {
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
     final TransitionCVsD CtoD = new TransitionCVsD();
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).next(CtoD).build();
     final String flowId = machine.startFlow();
@@ -228,8 +233,9 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_STEP_WISE, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_STEP_WISE)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
@@ -280,8 +286,9 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ONE_STEP).resetMachineToInitOnFailure(true)
+        .flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
@@ -323,8 +330,9 @@ public class StateMachineTest {
     final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
     final TransitionAVsB AtoB = new TransitionAVsB();
     final TransitionBVsC BtoC = new TransitionBVsC();
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
     final String flowId = machine.startFlow();
@@ -362,8 +370,9 @@ public class StateMachineTest {
     transitionFunctors.add(AtoB);
     final TransitionBVsC BtoC = new TransitionBVsC();
     transitionFunctors.add(BtoC);
-    final StateMachineConfiguration config =
-        new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ALL_THE_WAY_HARD_RESET, true, 0);
+    final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+        .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+        .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
     final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
         .next(toA).next(AtoB).next(BtoC).build();
 
@@ -448,8 +457,9 @@ public class StateMachineTest {
       public void run() {
         StateMachine machine = null;
         try {
-          final StateMachineConfiguration config =
-              new StateMachineConfiguration(FlowMode.MANUAL, RewindMode.ONE_STEP, true, 0);
+          final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+              .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ONE_STEP)
+              .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
           machine = StateMachineBuilder.newBuilder().config(config).transitions().next(toA)
               .next(AtoB).next(BtoC).build();
           final String flowId = machine.startFlow();

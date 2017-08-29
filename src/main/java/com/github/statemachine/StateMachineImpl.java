@@ -111,7 +111,6 @@ public final class StateMachineImpl implements StateMachine {
           if (config == null) {
             throw new StateMachineException(Code.INVALID_MACHINE_CONFIG);
           }
-          config.validate();
           this.config = config;
           if (transitionFunctors == null || transitionFunctors.isEmpty()) {
             throw new StateMachineException(Code.INVALID_TRANSITIONS);
@@ -353,7 +352,7 @@ public final class StateMachineImpl implements StateMachine {
             // TODO: log reverting the state of the stateFlowStack
             if (!success) {
               flow.flowStats.transitionFailures++;
-              if (config.resetMachineToInitOnFailure()) {
+              if (config.getResetMachineToInitOnFailure()) {
                 resetMachineToInitOnTransitionFailure(flowId);
                 flow.pumpRouteBuffer(notStartedState);
               } else {
@@ -399,7 +398,7 @@ public final class StateMachineImpl implements StateMachine {
               currentState = popState(flowId);
               previousState = popState(flowId);
               success = transitionTo(flowId, currentState, previousState, true);
-              if (!success && config.resetMachineToInitOnFailure()) {
+              if (!success && config.getResetMachineToInitOnFailure()) {
                 resetMachineToInitOnTransitionFailure(flowId);
               }
               break;
@@ -414,7 +413,7 @@ public final class StateMachineImpl implements StateMachine {
                 } finally {
                   // in case of transition failure, remember to revert the stateFlowStack
                   if (!success) {
-                    if (config.resetMachineToInitOnFailure()) {
+                    if (config.getResetMachineToInitOnFailure()) {
                       resetMachineToInitOnTransitionFailure(flowId);
                     } else {
                       pushNextState(flowId, previousState);
