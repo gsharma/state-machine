@@ -59,7 +59,7 @@ public void manualSyncMode() throws StateMachineException {
 ```
 
 ## Auto Async mode
-The auto async mode enables automatic transition of the FSM through its states but in a background thread. There is another option to allow doing it on the caller thread itself via the FlowMode.AUTO_CALLER_THREAD
+The auto async mode enables automatic transition of the FSM through its states but in a background thread.
 ```java
 public void autoAsyncMode() throws Exception {
   // op1. prep transitions
@@ -89,8 +89,39 @@ public void autoAsyncMode() throws Exception {
   System.out.println(String.format("fsm is alive: %s", machine.alive()));
 }
 ```
+There is another option to allow doing it on the caller thread itself via the FlowMode.AUTO_CALLER_THREAD
+```java
+public void testStateMachineFlowAutoCallerThread() throws Exception {
+  // op1. prep transitions
+  final TransitionNotStartedVsA toA = new TransitionNotStartedVsA();
+  final TransitionAVsB AtoB = new TransitionAVsB();
+  final TransitionBVsC BtoC = new TransitionBVsC();
 
-## A note about the RewindMode
+  // op2. load up the fsm with all its transitions
+  final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
+      .flowMode(FlowMode.AUTO_CALLER_THREAD).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
+      .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
+  final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
+      .next(toA).next(AtoB).next(BtoC).build();
+
+  // res2. check that fsm should be alive
+  System.out.println(String.format("fsm is alive: %s", machine.alive()));
+
+  // op3. start a flow
+  final String flowId = machine.startFlow();
+
+  // op4. stop the flow
+  System.out.println(String.format("fsm flowId: %s is stopped: %s", flowId, machine.stopFlow(flowId)));
+
+  // op5. stop the fsm, flow will auto-stop
+  System.out.println(String.format("fsm is alive: %s", machine.alive()));
+  machine.demolish();
+  System.out.println(String.format("fsm is alive: %s", machine.alive()));
+}
+```
+
+
+## A note on RewindMode
 Failure cases during state transitions present the FSM with options to rewind and proceed in the opposite direction. 3 rewind modes are available:
 1. ONE_STEP - rewind backwards one step only
 2. ALL_THE_WAY_STEP_WISE - rewind backwards all the way to INIT state but transition step-wise
