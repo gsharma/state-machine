@@ -26,7 +26,9 @@ a. ONE_STEP: rewind backwards one step only
 b. ALL_THE_WAY_STEP_WISE: rewind backwards all the way to INIT state but transition step-wise
 c. ALL_THE_WAY_HARD_RESET: rewind backwards all the way abruptly without trying to transition between individual states; effectively reset to INIT in one shot
 
-## Manual Sync mode
+
+## Modes of Operation
+### 1. Manual Sync mode
 This function illustrates how the FSM can be manually transitioned through its states. This mode provides total control over all transitions.
 ```java
 public void manualSyncMode() throws StateMachineException {
@@ -80,7 +82,7 @@ public void manualSyncMode() throws StateMachineException {
 }
 ```
 
-## Auto Async mode
+### 2. Auto Async mode
 The auto async mode enables automatic transition of the FSM through its states but in a background thread.
 ```java
 public void autoAsyncMode() throws Exception {
