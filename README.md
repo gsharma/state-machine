@@ -4,6 +4,28 @@ An implementation of a simple and hopefully elegant (from a user's perspective) 
 
 
 # FSM Usage Manual
+## Core Concepts
+### 1. State
+State is used to model a point in time/snapshot state of a system. The FSM works to transition between states.
+
+### 2. Transition
+State transitions are available via extending the transition functor to provide a tuple of {fromState, toState} and the business logic that will allow the FSM to transition either forward or backward between them.
+
+### 3. Flow
+A flow can and does typically represent a thread of execution. The idea being that you set up a type of FSM once (when the process starts up and before the FSM should do any useful work) with all its states and transitions between them. Every thread of execution can then be modeled as a synchronous or asynchronous flow that spans the life of the application thread. At the end of this thread's request lifecycle, the flow can be stopped. The FSM itself is still setup to be used by other flows.
+
+### 4. Flow Mode
+Flows can be configured to operate in one of 3 modes:
+a. AUTO_ASYNC: auto progress through transitions asynchronously on a thread different from the caller thread. Note that AUTO_ASYNC automatically calls Flow.stopFlow()
+b. AUTO_CALLER_THREAD: auto progress through transitions on the caller thread.
+c. MANUAL: manually progress through transition.
+
+### 5. Rewind Mode
+Failure cases during state transitions present the FSM with options to rewind and proceed in the opposite direction. 3 rewind modes are available:
+a. ONE_STEP: rewind backwards one step only
+b. ALL_THE_WAY_STEP_WISE: rewind backwards all the way to INIT state but transition step-wise
+c. ALL_THE_WAY_HARD_RESET: rewind backwards all the way abruptly without trying to transition between individual states; effectively reset to INIT in one shot
+
 ## Manual Sync mode
 This function illustrates how the FSM can be manually transitioned through its states. This mode provides total control over all transitions.
 ```java
@@ -119,13 +141,6 @@ public void testStateMachineFlowAutoCallerThread() throws Exception {
   System.out.println(String.format("fsm is alive: %s", machine.alive()));
 }
 ```
-
-
-## A note on RewindMode
-Failure cases during state transitions present the FSM with options to rewind and proceed in the opposite direction. 3 rewind modes are available:
-1. ONE_STEP - rewind backwards one step only
-2. ALL_THE_WAY_STEP_WISE - rewind backwards all the way to INIT state but transition step-wise
-3. ALL_THE_WAY_HARD_RESET - rewind backwards all the way abruptly without trying to transition between individual states; effectively reset to INIT in one shot
 
 ## Helper code for examples
 ```java
