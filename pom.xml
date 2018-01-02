@@ -111,6 +111,10 @@
             <goals>
               <goal>shade</goal>
             </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <createSourcesJar>true</createSourcesJar>
+            </configuration>
           </execution>
           <execution>
             <id>shade-bench</id>
