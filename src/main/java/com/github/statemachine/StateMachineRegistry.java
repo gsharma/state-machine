@@ -2,6 +2,7 @@ package com.github.statemachine;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,6 +13,8 @@ import org.apache.logging.log4j.Logger;
 final class StateMachineRegistry {
   private static final Logger logger =
       LogManager.getLogger(StateMachineRegistry.class.getSimpleName());
+
+  private final AtomicBoolean alive = new AtomicBoolean();
 
   // fugly and pathetic!! really gaurav, you couldn't do better??
   private static ConcurrentMap<String, StateMachine> allStateMachines = new ConcurrentHashMap<>();
@@ -38,42 +41,47 @@ final class StateMachineRegistry {
     return allStateMachines.get(stateMachineId);
   }
 
+  synchronized void demolish() {
+    if (alive != null && !alive.get()) {
+      logger.info("Global state machine registry is already shutdown");
+      return;
+    }
+    logger.info("Shutting down global state machine registry");
+    try {
+      statsGatherer.interrupt();
+      statsGatherer.join();
+      statsGatherer = null;
+    } catch (InterruptedException ignore) {
+    }
+    for (final StateMachine stateMachine : allStateMachines.values()) {
+      try {
+        if (stateMachine.alive()) {
+          logger.info(stateMachine.getStatistics());
+          stateMachine.demolish();
+        }
+      } catch (StateMachineException problem) {
+        logger.error(
+            "Problem occurred while running demolish() as part of the shutdown hook sequence.",
+            problem);
+      }
+    }
+    allStateMachines.clear();
+    allStateMachines = null;
+    alive.set(false);
+    logger.info("Successfully shut down global state machine registry");
+  }
+
   @Override
   public void finalize() {
     logger.info("Garbage collected stopped state machine registry");
   }
 
   private StateMachineRegistry() {
-    Runtime.getRuntime().addShutdownHook(new Thread("registry-purger") {
-      @Override
-      public void run() {
-        logger.info("Shutting down global state machine registry");
-        try {
-          statsGatherer.interrupt();
-          statsGatherer.join();
-          statsGatherer = null;
-        } catch (InterruptedException ignore) {
-        }
-        for (final StateMachine stateMachine : allStateMachines.values()) {
-          try {
-            if (stateMachine.alive()) {
-              logger.info(stateMachine.getStatistics());
-              stateMachine.demolish();
-            }
-          } catch (StateMachineException problem) {
-            logger.error(
-                "Problem occurred while running demolish() as part of the shutdown hook sequence.",
-                problem);
-          }
-        }
-        allStateMachines.clear();
-        allStateMachines = null;
-        logger.info("Successfully shut down global state machine registry");
-      }
-    });
-
     statsGatherer = new GlobalStatsDaemon();
     statsGatherer.start();
+    new StateMachineDestructor();
+    alive.set(true);
+    logger.info("Fired up global state machine registry");
   }
 
   /**
@@ -83,6 +91,7 @@ final class StateMachineRegistry {
     private GlobalStatsDaemon() {
       setName("stats-gatherer");
       setDaemon(true);
+      logger.info("Fired up global stats daemon");
     }
 
     @Override

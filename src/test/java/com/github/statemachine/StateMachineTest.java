@@ -87,7 +87,7 @@ public class StateMachineTest {
     assertTrue(machine.alive());
 
     // 3. start a flow
-    final String flowId = machine.startFlow();
+    machine.startFlow();
 
     // 4. give it a lil breather to finish running
     Thread.sleep(10L);

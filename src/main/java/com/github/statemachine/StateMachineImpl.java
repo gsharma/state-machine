@@ -829,6 +829,7 @@ public final class StateMachineImpl implements StateMachine {
           logError(machineId, null, "Logging unhandled exception.", error);
         }
       });
+      logInfo(machineId, null, "Fired up flow purger");
     }
 
     @Override
