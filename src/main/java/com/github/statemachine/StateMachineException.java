@@ -40,7 +40,9 @@ public final class StateMachineException extends Exception {
                                     "Transitions are null or empty"), ILLEGAL_TRANSITION(
                                         "Attempted transition between from->to states is illegal"), INVALID_MACHINE_CONFIG(
                                             "State machine configuration is invalid"), ILLEGAL_FLOW_ID(
-                                                "State machine failed to lookup flow with provided id");
+                                                "State machine failed to lookup flow with provided id"), INTERRUPTED(
+                                                    "State machine was interrupted"), UNKNOWN_FAILURE(
+                                                        "State machine failed. Check exception stacktrace for more details of the failure");
 
     private String description;
 

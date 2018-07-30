@@ -175,8 +175,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to curate state machine");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, null, exception);
     }
   }
 
@@ -213,8 +213,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to start flow");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, flowId, exception);
     }
     return flowId;
   }
@@ -245,8 +245,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to shutdown flow");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, flowId, exception);
     }
     return success;
   }
@@ -312,8 +312,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to shutdown state machine");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, null, exception);
     }
     return success;
   }
@@ -369,8 +369,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to transition state machine");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, flowId, exception);
     }
     return success;
   }
@@ -445,8 +445,8 @@ public final class StateMachineImpl implements StateMachine {
         throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE,
             "Timed out while trying to rewind state machine");
       }
-    } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+    } catch (Exception exception) {
+      fail(machineId, flowId, exception);
     }
     if (success) {
       flow.flowStats.transitionSuccesses++;
@@ -590,7 +590,7 @@ public final class StateMachineImpl implements StateMachine {
             "Timed out while trying to pop state");
       }
     } catch (InterruptedException exception) {
-      throw new StateMachineException(Code.OPERATION_LOCK_ACQUISITION_FAILURE, exception);
+      throw new StateMachineException(Code.INTERRUPTED, exception);
     }
     return nextState;
   }
@@ -668,6 +668,21 @@ public final class StateMachineImpl implements StateMachine {
       logger.debug(new StringBuilder().append("[m:").append(machineId).append("][f:").append(flowId)
           .append("] ").append(message).toString());
     }
+  }
+
+  private static void fail(final String machineId, final String flowId, final Throwable failure)
+      throws StateMachineException {
+    StateMachineException stateMachineException = null;
+    if (failure instanceof StateMachineException) {
+      stateMachineException = StateMachineException.class.cast(failure);
+    } else if (failure instanceof InterruptedException) {
+      stateMachineException = new StateMachineException(Code.INTERRUPTED, failure);
+    } else {
+      stateMachineException = new StateMachineException(Code.UNKNOWN_FAILURE, failure);
+    }
+    logError(machineId, flowId, stateMachineException.getCode().getDescription(),
+        stateMachineException);
+    throw stateMachineException;
   }
 
   @Override
