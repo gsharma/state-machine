@@ -575,7 +575,7 @@ public final class StateMachineImpl implements StateMachine {
       final Flow flow = lookupFlow(flowId);
       if (flow.flowWriteLock.tryLock(lockAcquisitionMillis, TimeUnit.MILLISECONDS)) {
         try {
-          nextState = flow.stateFlowStack.peek();
+          // nextState = flow.stateFlowStack.peek();
           // if (!nextState.equals(notStartedState)) {
           nextState = flow.stateFlowStack.pop();
           // }

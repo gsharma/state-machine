@@ -9,8 +9,8 @@
   <url>http://maven.apache.org</url>
 
   <scm>
-    <connection>scm:git:git://github.com:gsharma/statemachine.git</connection>
-    <developerConnection> scm:git:git@github.com:gsharma/statemachine.git</developerConnection>
+    <connection>scm:git:git://github.com:gsharma/state-machine.git</connection>
+    <developerConnection> scm:git:git@github.com:gsharma/state-machine.git</developerConnection>
     <url>http://github.com/gsharma/statemachine</url>
   </scm>
 
@@ -19,8 +19,11 @@
     <junit.version>4.12</junit.version>
     <jmh.version>1.19</jmh.version>
     <log4j.version>2.5</log4j.version>
-    <javac.target>1.8</javac.target>
+    <javac.target>1.9</javac.target>
     <uberjar.name>benchmarks</uberjar.name>
+    <github.global.server>github</github.global.server>
+    <github.user.name>gsharma</github.user.name>
+    <github.repo.name>state-machine</github.repo.name>
   </properties>
 
   <dependencies>
@@ -73,6 +76,7 @@
 
   <build>
     <plugins>
+      <!-- enforcer -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
@@ -91,6 +95,8 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- compiler -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -100,6 +106,8 @@
           <target>${javac.target}</target>
         </configuration>
       </plugin>
+
+      <!-- shade -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -143,6 +151,53 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- deploy -->
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.0.0-M1</version>
+        <configuration>
+          <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
+        </configuration>
+      </plugin>
+
+      <!-- gh site -->
+      <plugin>
+        <groupId>com.github.github</groupId>
+        <artifactId>site-maven-plugin</artifactId>
+        <version>0.12</version>
+        <configuration>
+          <!-- git commit message -->
+          <message>Maven artifacts for ${project.version}</message>
+          <!-- disable webpage processing -->
+          <noJekyll>true</noJekyll>
+          <!-- matches distribution management repo url above -->
+          <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
+          <!-- remote branch name -->
+          <branch>refs/heads/mvn-repo</branch>
+          <includes><include>**/*</include></includes>
+          <merge>true</merge>
+          <repositoryName>${github.repo.name}</repositoryName>
+          <repositoryOwner>${github.user.name}</repositoryOwner>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>site</goal>
+            </goals>
+            <phase>deploy</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>internal.repo</id>
+      <name>Temporary Staging Repository</name>
+      <url>file://${project.build.directory}/mvn-repo</url>
+    </repository>
+  </distributionManagement>
+
 </project>
