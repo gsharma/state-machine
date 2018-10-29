@@ -19,7 +19,7 @@
     <junit.version>4.12</junit.version>
     <jmh.version>1.19</jmh.version>
     <log4j.version>2.11.1</log4j.version>
-    <javac.target>1.9</javac.target>
+    <javac.target>1.8</javac.target>
     <uberjar.name>benchmarks</uberjar.name>
     <github.global.server>github</github.global.server>
     <github.user.name>gsharma</github.user.name>
