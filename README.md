@@ -1,3 +1,6 @@
+[![Build Status](https://img.shields.io/travis/gsharma/state-machine/master.svg)](https://travis-ci.org/gsharma/state-machine)
+[![Test Coverage](https://img.shields.io/codecov/c/github/gsharma/state-machine/master.svg)](https://codecov.io/github/gsharma/state-machine?branch=master)
+
 # Finite State Machine
 
 An implementation of a simple and hopefully elegant (from a user's perspective) FSM that allows both forward and backwards state transitions. At the moment, idempotency of state transitions is completely ignored. This could change and the machine could be enhanced to handle retries for idempotent state transitions.
