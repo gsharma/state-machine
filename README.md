@@ -7,6 +7,7 @@ An implementation of a simple and hopefully elegant (from a user's perspective) 
 
 
 # FSM Usage Manual
+
 ## Core Concepts
 ### 1. State
 State is used to model a point in time/snapshot state of a system. The FSM works to transition between states.
