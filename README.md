@@ -1,5 +1,6 @@
 [![Build Status](https://img.shields.io/travis/gsharma/state-machine/master.svg)](https://travis-ci.org/gsharma/state-machine)
 [![Test Coverage](https://img.shields.io/codecov/c/github/gsharma/state-machine/master.svg)](https://codecov.io/github/gsharma/state-machine?branch=master)
+[![Licence](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/gsharma/state-machine/blob/master/LICENSE)
 
 # Finite State Machine
 
