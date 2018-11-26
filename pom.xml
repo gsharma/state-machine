@@ -8,22 +8,23 @@
   <name>statemachine</name>
   <url>http://maven.apache.org</url>
 
-  <scm>
-    <connection>scm:git:git://github.com:gsharma/state-machine.git</connection>
-    <developerConnection> scm:git:git@github.com:gsharma/state-machine.git</developerConnection>
-    <url>http://github.com/gsharma/statemachine</url>
-  </scm>
-
   <properties>
+    <github.global.server>github</github.global.server>
+    <github.user.name>gsharma</github.user.name>
+    <github.repo.name>state-machine</github.repo.name>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>4.12</junit.version>
     <jmh.version>1.19</jmh.version>
     <log4j.version>2.11.1</log4j.version>
     <javac.target>1.8</javac.target>
     <uberjar.name>benchmarks</uberjar.name>
-    <github.global.server>github</github.global.server>
-    <github.user.name>gsharma</github.user.name>
-    <github.repo.name>state-machine</github.repo.name>
+    <os-maven-plugin.version>1.6.1</os-maven-plugin.version>
+    <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
+    <maven-enforcer-plugin.version>3.0.0-M2</maven-enforcer-plugin.version>
+    <jacoco-maven-plugin.version>0.8.2</jacoco-maven-plugin.version>
+    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
+    <maven-deploy-plugin.version>3.0.0-M1</maven-deploy-plugin.version>
+    <site-maven-plugin.version>0.12</site-maven-plugin.version>
   </properties>
 
   <dependencies>
@@ -39,12 +40,14 @@
       <version>${jmh.version}</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
       <version>${jmh.version}</version>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
@@ -75,12 +78,20 @@
   </reporting>-->
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>${os-maven-plugin.version}</version>
+      </extension>
+    </extensions>
+
     <plugins>
       <!-- enforcer -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.4.1</version>
+        <version>${maven-enforcer-plugin.version}</version>
         <executions>
           <execution>
             <id>enforce</id>
@@ -100,7 +111,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.6.1</version>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <source>${javac.target}</source>
           <target>${javac.target}</target>
@@ -111,7 +122,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>${maven-shade-plugin.version}</version>
         <executions>
           <execution>
             <id>shade-main</id>
@@ -155,7 +166,7 @@
       <!-- deploy -->
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>3.0.0-M1</version>
+        <version>${maven-deploy-plugin.version}</version>
         <configuration>
           <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
         </configuration>
@@ -165,7 +176,7 @@
       <plugin>
         <groupId>com.github.github</groupId>
         <artifactId>site-maven-plugin</artifactId>
-        <version>0.12</version>
+        <version>${site-maven-plugin.version}</version>
         <configuration>
           <!-- git commit message -->
           <message>Maven artifacts for ${project.version}</message>
@@ -194,7 +205,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.2</version>
+        <version>${jacoco-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>prepare-agent</id>

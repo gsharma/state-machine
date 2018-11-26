@@ -1,5 +1,6 @@
 [![Build Status](https://img.shields.io/travis/gsharma/state-machine/master.svg)](https://travis-ci.org/gsharma/state-machine)
 [![Test Coverage](https://img.shields.io/codecov/c/github/gsharma/state-machine/master.svg)](https://codecov.io/github/gsharma/state-machine?branch=master)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=com.github.statemachine:statemachine&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.github.statemachine:statemachine)
 [![Licence](https://img.shields.io/hexpm/l/plug.svg)](https://github.com/gsharma/state-machine/blob/master/LICENSE)
 
 # Finite State Machine
@@ -236,3 +237,14 @@ public void testStateMachineFlowAutoCallerThread() throws Exception {
     }
   }
 ```
+
+## FSM as a library
+Add mvn dependency:
+```xml
+<dependency>
+  <groupId>com.github.statemachine</groupId>
+  <artifactId>statemachine</artifactId>
+  <version>1.0-SNAPSHOT</version>
+</dependency>
+```
+
