@@ -5,7 +5,9 @@
 
 # Finite State Machine
 
-An implementation of a simple and hopefully elegant (from a user's perspective) FSM that allows both forward and backwards state transitions. At the moment, idempotency of state transitions is completely ignored. This could change and the machine could be enhanced to handle retries for idempotent state transitions.
+An implementation of a simple and elegant (from a user's perspective) FSM that allows both forward and backwards state transitions. At the moment, idempotency of state transitions is completely ignored. This could change and the machine could be enhanced to handle retries for idempotent state transitions.
+
+The FSM framework itself does not limit users choice between a Mealy or a Moore type of FSM. In the practical sense, most machines are Mealy machines in that the transitions between states are a function of both the from-state as well as the inputs accompanying the transition. The TransitionFunctor is deliberately written in a way to afford this choice to users.
 
 
 # FSM Usage Manual
