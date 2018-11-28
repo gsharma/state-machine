@@ -32,6 +32,9 @@ a. ONE_STEP: rewind backwards one step only
 b. ALL_THE_WAY_STEP_WISE: rewind backwards all the way to INIT state but transition step-wise
 c. ALL_THE_WAY_HARD_RESET: rewind backwards all the way abruptly without trying to transition between individual states; effectively reset to INIT in one shot
 
+### 6. Hysteresis
+In order to avoid additional complexity, Hysteresis is not explicitly baked into the FSM and is left as a responsibility of the Transition implementers.
+
 
 ## Modes of Operation
 ### 1. Manual Sync mode
