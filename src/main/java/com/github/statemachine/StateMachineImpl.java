@@ -343,8 +343,6 @@ public final class StateMachineImpl implements StateMachine {
             final boolean isForwardTransition = isForwardTransition(currentState, nextState);
             success = transitionTo(flowId, currentState, nextState, !isForwardTransition);
             if (success) {
-              logInfo(machineId, flowId, String.format("Successfully transitioned from %s->%s",
-                  currentState.getName(), nextState.getName()));
               flow.pumpRouteBuffer(nextState);
             }
           } finally {
@@ -512,7 +510,8 @@ public final class StateMachineImpl implements StateMachine {
 
     try {
       if (fromState == null || toState == null) {
-        // TODO: log this
+        logError(machineId, flowId,
+            String.format("Cannot transition from %s to %s", fromState, toState));
         return success;
       }
       final TransitionFunctor transitionFunctor =
@@ -527,6 +526,15 @@ public final class StateMachineImpl implements StateMachine {
           }
           pushNextState(flowId, toState);
           success = true;
+
+          // Inject commit points for all successful state transitions
+          boolean committed = commit(machineId, flowId, fromState, toState);
+          if (!committed) {
+            // TODO
+          }
+
+          logInfo(machineId, flowId, String.format("Successfully transitioned from %s->%s",
+              fromState.getName(), toState.getName()));
         } else {
           if (!rewinding) {
             logError(machineId, flowId, String.format("Failed to transition from %s to %s, %s",
@@ -552,6 +560,18 @@ public final class StateMachineImpl implements StateMachine {
     } finally {
       flow.flowWriteLock.unlock();
     }
+    return success;
+  }
+
+  /**
+   * Reliably persist this commit point.
+   */
+  private static boolean commit(final String machineId, final String flowId, final State fromState,
+      final State toState) {
+    logInfo(machineId, flowId,
+        String.format("Committing transition from %s to %s", fromState, toState));
+    // TODO
+    boolean success = true;
     return success;
   }
 

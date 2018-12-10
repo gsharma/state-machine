@@ -22,10 +22,6 @@ import com.github.statemachine.StateMachineException.Code;
  * Tests to maintain the sanity and correctness of StateMachine.
  */
 public class StateMachineTest {
-  static {
-    System.setProperty("log4j.configurationFile", "log4j.properties");
-  }
-
   private static final Logger logger = LogManager.getLogger(StateMachineImpl.class.getSimpleName());
 
   @Test
