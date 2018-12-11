@@ -37,6 +37,9 @@ c. ALL_THE_WAY_HARD_RESET: rewind backwards all the way abruptly without trying 
 ### 6. Hysteresis
 In order to avoid additional complexity, Hysteresis is not explicitly baked into the FSM and is left as a responsibility of the Transition implementers.
 
+### 7. Flows & Epochs
+It is worth mentioning that a flow does not correspond to an epoch. Modeling an epoch is left to the users of the FSM based on what events they consider significant enough to tick an epoch.
+
 
 ## Modes of Operation
 ### 1. Manual Sync mode
