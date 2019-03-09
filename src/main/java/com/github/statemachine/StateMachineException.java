@@ -29,20 +29,34 @@ public final class StateMachineException extends Exception {
   }
 
   public static enum Code {
+    // 1.
     TRANSITION_FAILURE(
-        "Failed to transition to desired state. Check exception stacktrace for more details of the failure."), MACHINE_NOT_ALIVE(
-            "State machine is not running and cannot service requests"), OPERATION_LOCK_ACQUISITION_FAILURE(
-                "Failed to acquire read or write lock to perform requested operation. This is retryable."), REWIND_FAILURE(
-                    "Failed to rewind via unsupported RewindMode for State Machine"), INVALID_STATE_NAME(
-                        "State name cannot be null or greater than " + State.maxStateNameLength
-                            + " characters"), INVALID_STATE(
-                                "Null state is invalid"), INVALID_TRANSITIONS(
-                                    "Transitions are null or empty"), ILLEGAL_TRANSITION(
-                                        "Attempted transition between from->to states is illegal"), INVALID_MACHINE_CONFIG(
-                                            "State machine configuration is invalid"), ILLEGAL_FLOW_ID(
-                                                "State machine failed to lookup flow with provided id"), INTERRUPTED(
-                                                    "State machine was interrupted"), UNKNOWN_FAILURE(
-                                                        "State machine failed. Check exception stacktrace for more details of the failure");
+        "Failed to transition to desired state. Check exception stacktrace for more details of the failure."),
+    // 2.
+    MACHINE_NOT_ALIVE("State machine is not running and cannot service requests"),
+    // 3.
+    OPERATION_LOCK_ACQUISITION_FAILURE(
+        "Failed to acquire read or write lock to perform requested operation. This is retryable."),
+    // 4.
+    REWIND_FAILURE("Failed to rewind via unsupported RewindMode for State Machine"),
+    // 5.
+    INVALID_STATE_NAME(
+        "State name cannot be null or greater than " + State.maxStateNameLength + " characters"),
+    // 6.
+    INVALID_STATE("Null state is invalid"),
+    // 7.
+    INVALID_TRANSITIONS("Transitions are null or empty"),
+    // 8.
+    ILLEGAL_TRANSITION("Attempted transition between from->to states is illegal"),
+    // 9.
+    INVALID_MACHINE_CONFIG("State machine configuration is invalid"),
+    // 10.
+    ILLEGAL_FLOW_ID("State machine failed to lookup flow with provided id"),
+    // 11.
+    INTERRUPTED("State machine was interrupted"),
+    // 12.
+    UNKNOWN_FAILURE(
+        "State machine failed. Check exception stacktrace for more details of the failure");
 
     private String description;
 
