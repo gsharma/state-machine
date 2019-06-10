@@ -7,4 +7,7 @@ package com.github.statemachine;
  */
 public final class SchedulerStateMachineTest {
   // TODO
+  // States:: SUBMIT -> PENDING -> RUNNING -> DEAD
+  // Transitions (user):: submit, kill, update
+  // Transitions (full):: submit, accept, reject, update, schedule, evict, finish, fail, kill, lost,
 }
