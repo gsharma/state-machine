@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.Test;
 
 /**
  * Tests for an FSM for Jobs and Tasks in a Distributed Scheduler.
@@ -14,11 +15,16 @@ public final class SchedulerStateMachineTest {
   private static final Logger logger =
       LogManager.getLogger(SchedulerStateMachineTest.class.getSimpleName());
 
+  @Test
+  public void testStateMachineFlow() throws StateMachineException {
+    // TODO
+  }
+
   // TODO
-  // States:: SUBMIT -> PENDING -> RUNNING -> DEAD
   // Transitions (user):: submit, kill, update
   // Transitions (full):: submit, accept, reject, update, schedule, evict, finish, fail, kill, lost,
 
+  // States:: SUBMIT -> PENDING -> RUNNING -> DEAD
   public static final class States {
     public static State submit, pending, running, dead;
     static {
