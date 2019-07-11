@@ -642,6 +642,8 @@ public final class StateMachineImpl implements StateMachine {
           throw new StateMachineException(Code.ILLEGAL_TRANSITION);
         }
       }
+    } else {
+      logger.warn("Found null transitionFunctor for transition {}->{}", stateOne, stateTwo);
     }
     return forward;
   }
