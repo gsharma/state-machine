@@ -643,7 +643,7 @@ public final class StateMachineImpl implements StateMachine {
         }
       }
     } else {
-      logger.warn("Found null transitionFunctor for transition {}->{}", stateOne, stateTwo);
+      logger.error("Found null transitionFunctor for transition {}->{}", stateOne, stateTwo);
     }
     return forward;
   }

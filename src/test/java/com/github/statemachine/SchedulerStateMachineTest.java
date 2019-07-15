@@ -23,7 +23,6 @@ public final class SchedulerStateMachineTest {
   private static final Logger logger =
       LogManager.getLogger(SchedulerStateMachineTest.class.getSimpleName());
 
-  @Ignore("Some fixes needed")
   @Test
   public void testJobFlow() throws StateMachineException {
     // 1. prep transitions
@@ -36,8 +35,9 @@ public final class SchedulerStateMachineTest {
     final StateMachineConfiguration config = StateMachineConfigurationBuilder.newBuilder()
         .flowMode(FlowMode.MANUAL).rewindMode(RewindMode.ALL_THE_WAY_HARD_RESET)
         .resetMachineToInitOnFailure(true).flowExpirationMillis(0).build();
-    final StateMachine machine = StateMachineBuilder.newBuilder().config(config).transitions()
-        .next(submitToPending).next(pendingToRunning).next(runningToDead).build();
+    final StateMachine machine =
+        StateMachineBuilder.newBuilder().config(config).transitions().next(notStartedToSubmit)
+            .next(submitToPending).next(pendingToRunning).next(runningToDead).build();
     assertTrue(machine.alive());
 
     // 3. start a flow
