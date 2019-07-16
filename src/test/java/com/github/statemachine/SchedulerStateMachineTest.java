@@ -73,10 +73,10 @@ public final class SchedulerStateMachineTest {
     assertFalse(machine.alive());
   }
 
-  // States:: SUBMIT -> PENDING -> RUNNING -> DEAD
+  // Job States:: SUBMIT -> PENDING -> RUNNING -> DEAD
   // Transitions (user):: submit, kill, update
   // Transitions (full):: submit, accept, reject, update, schedule, evict, finish, fail, kill, lost
-  public static final class States {
+  public static final class JobStates {
     public static State submit, pending, running, dead;
     static {
       try {
@@ -91,72 +91,72 @@ public final class SchedulerStateMachineTest {
 
   public static final class TransitionNotStartedToSubmit extends TransitionFunctor {
     public TransitionNotStartedToSubmit() throws StateMachineException {
-      super(StateMachineImpl.notStartedState, States.submit);
+      super(StateMachineImpl.notStartedState, JobStates.submit);
     }
 
     @Override
     public TransitionResult progress() {
-      logger.info(StateMachineImpl.notStartedState + "->" + States.submit.getName());
+      logger.info(StateMachineImpl.notStartedState + "->" + JobStates.submit.getName());
       return new TransitionResult(true, null, null);
     }
 
     @Override
     public TransitionResult regress() {
-      logger.info(StateMachineImpl.notStartedState.getName() + "->" + States.submit.getName());
+      logger.info(StateMachineImpl.notStartedState.getName() + "->" + JobStates.submit.getName());
       return new TransitionResult(true, null, null);
     }
   }
 
   public static final class TransitionSubmitToPending extends TransitionFunctor {
     public TransitionSubmitToPending() throws StateMachineException {
-      super(States.submit, States.pending);
+      super(JobStates.submit, JobStates.pending);
     }
 
     @Override
     public TransitionResult progress() {
-      logger.info(States.submit.getName() + "->" + States.pending.getName());
+      logger.info(JobStates.submit.getName() + "->" + JobStates.pending.getName());
       return new TransitionResult(true, null, null);
     }
 
     @Override
     public TransitionResult regress() {
-      logger.info(States.pending.getName() + "->" + States.submit.getName());
+      logger.info(JobStates.pending.getName() + "->" + JobStates.submit.getName());
       return new TransitionResult(true, null, null);
     }
   }
 
   public static final class TransitionPendingToRunning extends TransitionFunctor {
     public TransitionPendingToRunning() throws StateMachineException {
-      super(States.pending, States.running);
+      super(JobStates.pending, JobStates.running);
     }
 
     @Override
     public TransitionResult progress() {
-      logger.info(States.pending.getName() + "->" + States.running.getName());
+      logger.info(JobStates.pending.getName() + "->" + JobStates.running.getName());
       return new TransitionResult(true, null, null);
     }
 
     @Override
     public TransitionResult regress() {
-      logger.info(States.running.getName() + "->" + States.pending.getName());
+      logger.info(JobStates.running.getName() + "->" + JobStates.pending.getName());
       return new TransitionResult(true, null, null);
     }
   }
 
   public static final class TransitionRunningToDead extends TransitionFunctor {
     public TransitionRunningToDead() throws StateMachineException {
-      super(States.running, States.dead);
+      super(JobStates.running, JobStates.dead);
     }
 
     @Override
     public TransitionResult progress() {
-      logger.info(States.running.getName() + "->" + States.dead.getName());
+      logger.info(JobStates.running.getName() + "->" + JobStates.dead.getName());
       return new TransitionResult(true, null, null);
     }
 
     @Override
     public TransitionResult regress() {
-      logger.info(States.dead.getName() + "->" + States.running.getName());
+      logger.info(JobStates.dead.getName() + "->" + JobStates.running.getName());
       return new TransitionResult(true, null, null);
     }
   }
