@@ -83,10 +83,15 @@ public class StateMachineTest {
     assertTrue(machine.alive());
 
     // 3. start a flow
-    machine.startFlow();
+    final String flowId = machine.startFlow();
+
 
     // 4. give it a lil breather to finish running
-    Thread.sleep(10L);
+    // since auto-async mode will auto-stop this 1 flow, check stats
+    while (machine.getStatistics().getTotalStoppedFlows() != 1) {
+      logger.info("Sleeping 5 millis for flow {} to finish", flowId);
+      Thread.sleep(5L);
+    }
 
     // 5. stop the fsm
     assertTrue(machine.alive());

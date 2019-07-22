@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -196,10 +197,11 @@ public final class StateMachineImpl implements StateMachine {
           machineStats.totalStartedFlows++;
           switch (config.getFlowMode()) {
             case AUTO_ASYNC:
-              flowCompletionService.submit(new FlowJob(flowId, transitionFunctors, this, true));
+              final Future<AutoFlowResult> flowResultFuture =
+                  flowCompletionService.submit(new FlowJob(flowId, transitionFunctors, this, true));
               break;
             case AUTO_CALLER_THREAD:
-              AutoFlowResult flowResult =
+              final AutoFlowResult flowResult =
                   new FlowJob(flowId, transitionFunctors, this, false).call();
               break;
             case MANUAL:
