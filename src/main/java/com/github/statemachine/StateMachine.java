@@ -23,7 +23,7 @@ import com.github.statemachine.FlowStatistics.StateTimePair;
  * FSM instance for the same flow every time.<br>
  * 
  * 4. expanding on #3, if a state machine is running and going through various state transitions,
- * the FSM itself does not expect any thread affinity ( meaning the caller does not have to use the
+ * the FSM itself does not expect any thread affinity (meaning the caller does not have to use the
  * same thread to change states).<br>
  * 
  * 5. this is a skeleton/marker interface for the FSM. This exists purely as a header file for
