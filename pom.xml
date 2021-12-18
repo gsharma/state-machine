@@ -15,7 +15,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>4.13.1</junit.version>
     <jmh.version>1.19</jmh.version>
-    <log4j.version>2.13.3</log4j.version>
+    <log4j.version>2.17.0</log4j.version>
     <javac.target>13</javac.target>
     <uberjar.name>benchmarks</uberjar.name>
     <os-maven-plugin.version>1.6.1</os-maven-plugin.version>
